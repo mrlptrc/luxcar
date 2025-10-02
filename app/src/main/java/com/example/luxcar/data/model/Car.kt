@@ -10,5 +10,5 @@ data class Car (
     val modelo: String,
     val cor: String,
     val ano: Int,
-    val kilometragem: Double
+    val kilometragem: Double,
 )

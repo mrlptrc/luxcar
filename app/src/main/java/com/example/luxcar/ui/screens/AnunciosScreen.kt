@@ -10,6 +10,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -27,11 +28,13 @@ import androidx.compose.ui.unit.dp
 import com.example.luxcar.data.database.AppDatabase
 import com.example.luxcar.data.model.Car
 import com.example.luxcar.data.model.Poster
+import com.example.luxcar.data.model.PosterImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,10 +44,19 @@ fun AnunciosScreen(db: AppDatabase, onLogout: () -> Unit, onOpenCar: (Int) -> Un
 
     var posters by remember { mutableStateOf(listOf<Poster>()) }
     val cars by db.carDao().getAllCars().collectAsState(initial = emptyList())
+    var imagesMap by remember { mutableStateOf(mapOf<Int, ByteArray?>()) } // posterId -> primeira imagem
 
     // buscar do banco quando abrir
     LaunchedEffect(Unit) {
         posters = db.posterDao().list()
+
+        // pegar a primeira imagem de cada poster
+        val map = mutableMapOf<Int, ByteArray?>()
+        posters.forEach { poster ->
+            val imgs = db.posterImageDao().getByPosterId(poster.id)
+            map[poster.id] = imgs.firstOrNull()?.image
+        }
+        imagesMap = map
     }
 
     // controle do filtro
@@ -81,7 +93,11 @@ fun AnunciosScreen(db: AppDatabase, onLogout: () -> Unit, onOpenCar: (Int) -> Un
             }
         }
     ) { paddingValues ->
-        Column(Modifier.padding(paddingValues).padding(16.dp)) {
+        Column(
+            Modifier
+                .padding(paddingValues)
+                .padding(16.dp)
+        ) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -100,18 +116,18 @@ fun AnunciosScreen(db: AppDatabase, onLogout: () -> Unit, onOpenCar: (Int) -> Un
             ) {
                 items(filteredPosters) { poster ->
                     val car = cars.find { it.id == poster.carId }
+                    val cover = imagesMap[poster.id] // primeira imagem
+
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(250.dp)
-                            .clickable{
-                                onOpenCar(poster.carId);
-                            },
+                            .clickable { onOpenCar(poster.carId) },
                         elevation = CardDefaults.cardElevation(4.dp)
                     ) {
                         Column(Modifier.padding(12.dp)) {
-                            if (poster.imagem.isNotEmpty()) {
-                                val bitmap = BitmapFactory.decodeByteArray(poster.imagem, 0, poster.imagem.size)
+                            cover?.let { imgBytes ->
+                                val bitmap = BitmapFactory.decodeByteArray(imgBytes, 0, imgBytes.size)
                                 bitmap?.let {
                                     Image(
                                         bitmap = it.asImageBitmap(),
@@ -122,13 +138,17 @@ fun AnunciosScreen(db: AppDatabase, onLogout: () -> Unit, onOpenCar: (Int) -> Un
                                     )
                                 }
                             }
+
                             Text(
                                 poster.titulo,
                                 style = MaterialTheme.typography.titleMedium,
                                 maxLines = 1
                             )
                             car?.let {
-                                Text("${it.marca} ${it.modelo} (${it.ano})", style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    "${it.marca} ${it.modelo} (${it.ano})",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
                             }
                             Text("R$ ${poster.preco}", style = MaterialTheme.typography.bodyLarge)
 
@@ -148,6 +168,7 @@ fun AnunciosScreen(db: AppDatabase, onLogout: () -> Unit, onOpenCar: (Int) -> Un
                                         db.posterDao().delete(poster)
                                         car?.let { db.carDao().deleteCar(it) }
                                         posters = db.posterDao().list()
+                                        imagesMap = imagesMap - poster.id
                                         Toast.makeText(context, "Anúncio excluído", Toast.LENGTH_SHORT).show()
                                     }
                                 }) { Text("Excluir") }
@@ -156,7 +177,6 @@ fun AnunciosScreen(db: AppDatabase, onLogout: () -> Unit, onOpenCar: (Int) -> Un
                     }
                 }
             }
-
         }
     }
 
@@ -168,6 +188,14 @@ fun AnunciosScreen(db: AppDatabase, onLogout: () -> Unit, onOpenCar: (Int) -> Un
             onSave = {
                 scope.launch {
                     posters = db.posterDao().list()
+
+                    // atualizar covers depois de salvar
+                    val map = mutableMapOf<Int, ByteArray?>()
+                    posters.forEach { poster ->
+                        val imgs: List<PosterImage> = db.posterImageDao().getByPosterId(poster.id)
+                        map[poster.id] = imgs.firstOrNull()?.image // Unresolved reference 'imagem'.
+                    }
+                    imagesMap = map
                 }
                 showDialog = false
             }
@@ -175,6 +203,8 @@ fun AnunciosScreen(db: AppDatabase, onLogout: () -> Unit, onOpenCar: (Int) -> Un
     }
 }
 
+
+// outra function
 @Composable
 fun AddEditDialog(
     db: AppDatabase,
@@ -193,7 +223,7 @@ fun AddEditDialog(
     var titulo by remember { mutableStateOf("") }
     var descricao by remember { mutableStateOf("") }
     var preco by remember { mutableStateOf("") }
-    var selectedImage by remember { mutableStateOf<ByteArray?>(null) }
+    var selectedImages by remember { mutableStateOf(listOf<ByteArray>()) }
 
     // preencher se for edição
     LaunchedEffect(posterToEdit) {
@@ -209,28 +239,26 @@ fun AddEditDialog(
             titulo = poster.titulo
             descricao = poster.descricao
             preco = poster.preco.toString()
-            selectedImage = poster.imagem
+
+            // buscar imagens do banco
+            val imgs: List<PosterImage> = db.posterImageDao().getByPosterId(poster.id)
+            selectedImages = imgs.map { it.image }
         }
     }
 
+    // launcher para selecionar múltiplas imagens
     val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            scope.launch {
-                selectedImage = withContext(Dispatchers.IO) {
-                    val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-                    val buffer = ByteArrayOutputStream()
-                    inputStream?.use { stream ->
-                        val data = ByteArray(1024)
-                        var read: Int
-                        while (stream.read(data).also { read = it } != -1) {
-                            buffer.write(data, 0, read)
-                        }
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris: List<Uri> ->
+        scope.launch {
+            val images = uris.mapNotNull { uri ->
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        stream.readBytes()
                     }
-                    buffer.toByteArray()
                 }
             }
+            selectedImages = selectedImages + images // acumula
         }
     }
 
@@ -297,20 +325,28 @@ fun AddEditDialog(
                         .fillMaxWidth()
                         .padding(top = 8.dp)
                 ) {
-                    Text("Selecionar Imagem")
+                    Text("Selecionar Imagens")
                 }
 
-                selectedImage?.let {
-                    val bitmap = BitmapFactory.decodeByteArray(it, 0, it.size)
-                    bitmap?.let { bmp ->
-                        Image(
-                            bitmap = bmp.asImageBitmap(),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(150.dp)
-                                .padding(top = 8.dp)
-                        )
+                // preview de imagens selecionadas
+                if (selectedImages.isNotEmpty()) {
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(selectedImages) { imgBytes ->
+                            val bmp = BitmapFactory.decodeByteArray(imgBytes, 0, imgBytes.size)
+                            bmp?.let {
+                                Image(
+                                    bitmap = it.asImageBitmap(),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(120.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -320,7 +356,7 @@ fun AddEditDialog(
                 scope.launch {
                     try {
                         if (posterToEdit == null) {
-                            // Novo
+                            // Criar carro
                             val carId = db.carDao().insertCar(
                                 Car(
                                     marca = marca,
@@ -331,16 +367,27 @@ fun AddEditDialog(
                                 )
                             ).toInt()
 
-                            val poster = Poster(
-                                titulo = titulo,
-                                descricao = descricao,
-                                preco = preco.toDoubleOrNull() ?: 0.0,
-                                imagem = selectedImage ?: ByteArray(0),
-                                carId = carId
-                            )
-                            db.posterDao().insert(poster)
+                            val posterId = db.posterDao().insert(
+                                Poster(
+                                    titulo = titulo,
+                                    descricao = descricao,
+                                    preco = preco.toDoubleOrNull() ?: 0.0,
+                                    imagem = ByteArray(0),
+                                    carId = carId
+                                )
+                            ).toInt()
+
+                            // salvar imagens
+                            selectedImages.forEach { img ->
+                                db.posterImageDao().insert(
+                                    PosterImage(
+                                        posterId = posterId, // para novo poster
+                                        image = img
+                                    )
+                                )
+                            }
                         } else {
-                            // Editar
+                            // Atualizar carro
                             val car = db.carDao().getCarById(posterToEdit.carId)
                             car?.let {
                                 db.carDao().updateCar(
@@ -358,10 +405,17 @@ fun AddEditDialog(
                                 posterToEdit.copy(
                                     titulo = titulo,
                                     descricao = descricao,
-                                    preco = preco.toDoubleOrNull() ?: 0.0,
-                                    imagem = selectedImage ?: ByteArray(0)
+                                    preco = preco.toDoubleOrNull() ?: 0.0
                                 )
                             )
+
+                            // sobrescreve imagens
+                            db.posterImageDao().deleteByPosterId(posterToEdit.id)
+                            selectedImages.forEach { img ->
+                                db.posterImageDao().insert(
+                                    PosterImage(posterId = posterToEdit.id, image = img)
+                                )
+                            }
                         }
 
                         Toast.makeText(context, "Salvo com sucesso!", Toast.LENGTH_SHORT).show()
@@ -377,4 +431,5 @@ fun AddEditDialog(
         }
     )
 }
+
 

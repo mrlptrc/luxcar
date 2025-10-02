@@ -10,7 +10,7 @@ import com.example.luxcar.data.model.Poster
 @Dao
 interface PosterDao {
     @Insert
-    suspend fun insert(poster: Poster)
+    suspend fun insert(poster: Poster): Long
 
     @Query("SELECT * FROM posters")
     suspend fun list(): List<Poster>;
