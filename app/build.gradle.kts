@@ -1,13 +1,20 @@
+import com.google.devtools.ksp.gradle.KspTask
+
 plugins {
     id("com.android.application")
     kotlin("android")
     id("com.google.devtools.ksp")
-
 }
 
 android {
     namespace = "com.example.luxcar"
     compileSdk = 36
+
+    testOptions {
+        execution = "ANDROIDX_TEST_ORCHESTRATOR"
+        animationsDisabled = true
+        reportDir = file("$buildDir/reports/tests").toString()
+    }
 
     defaultConfig {
         applicationId = "com.example.luxcar"
@@ -44,6 +51,26 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"
     }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
+    sourceSets {
+        getByName("androidTest").java.srcDirs("src/androidTest/java")
+    }
+}
+
+tasks.matching { it is KspTask }.configureEach {
+    onlyIf {
+        !gradle.startParameter.taskNames.any { it.contains("connectedDebugAndroidTest") }
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("androidx.test.espresso:espresso-core:3.5.0")
+    }
 }
 
 dependencies {
@@ -55,6 +82,11 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.junit.ktx)
+    implementation(libs.androidx.ui.test.junit4)
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
@@ -66,6 +98,7 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    implementation(kotlin("test"))
 }

@@ -11,5 +11,5 @@ data class Poster(
     val descricao: String,
     val preco: Double,
     val imagem: ByteArray,
-    val carId: Int
+    val carId: Long
 )

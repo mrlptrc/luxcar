@@ -21,11 +21,11 @@ interface CarDao {
 
     // atualiza o obj carro
     @Update
-    suspend fun updateCar(car: Car): Int
+    suspend fun updateCar(car: Car)
 
     // busca carro pelo id dele
     @Query("SELECT * FROM cars WHERE id = :id")
-    suspend fun getCarById(id: Int): Car?
+    suspend fun getCarById(id: Long): Car?
 
     // flow cars permite busca automaticas da lista de carros
     @Query("SELECT * FROM cars")

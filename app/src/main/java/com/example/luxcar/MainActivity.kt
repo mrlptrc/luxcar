@@ -1,4 +1,3 @@
-// MainActivity.kt
 package com.example.luxcar
 
 import android.os.Bundle
@@ -18,7 +17,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // criação do banco com migração
+        // criação do banco
         db = Room.databaseBuilder(
             applicationContext,
             AppDatabase::class.java,
@@ -44,7 +43,12 @@ class MainActivity : ComponentActivity() {
                     "anuncios" -> AnunciosScreen(
                         db = db,
                         onLogout = { currentScreen = "login" },
-                        onOpenCar = { carId -> currentScreen = "carDetail/$carId" }
+                        onOpenCar = { carId -> currentScreen = "carDetail/$carId" },
+                        onAbout = { currentScreen = "sobremim" }
+                    )
+                    "sobremim" -> AboutScreen(
+                        logoResId = R.drawable.normalgroup,
+                        onBack = { currentScreen = "anuncios" }
                     )
                     else -> {
                         if (currentScreen.startsWith("carDetail/")) {
@@ -52,7 +56,8 @@ class MainActivity : ComponentActivity() {
                             CarDetailScreen(
                                 db = db,
                                 carId = carId,
-                                onBack = { currentScreen = "anuncios" }
+                                onBack = { currentScreen = "anuncios" },
+                                logoResId = R.drawable.normalgroup
                             )
                         }
                     }
