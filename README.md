@@ -938,4 +938,845 @@ override fun onBindViewHolder(holder: PosterViewHolder, position: Int) {
 ```kotlin
 fun updateList(
     newList: List<Poster>,
-    newImages: Map
+    newImages: Map<Long, ByteArray?>,
+    newCars: List<Car>
+) {
+    this.posters = newList
+    this.images.clear()
+    this.images.putAll(newImages)
+    this.cars.clear()
+    this.cars.addAll(newCars)
+    notifyDataSetChanged()
+}
+```
+
+**Uso:**
+```kotlin
+// Na tela AnunciosScreen
+adapter.updateList(
+    newList = filteredPosters,
+    newImages = loadedImages,
+    newCars = allCars
+)
+```
+
+---
+
+## 🛠️ Utilitários
+
+### 1. PasswordHasher
+
+```kotlin
+object PasswordHasher {
+    
+    fun hashPassword(password: String): String
+    fun checkPassword(password: String, hashedPassword: String): Boolean
+    fun isValidPassword(password: String): Boolean
+    fun getPasswordErrorMessage(password: String): String?
+}
+```
+
+**Métodos Detalhados:**
+
+#### `hashPassword(password: String): String`
+Gera hash BCrypt da senha.
+
+```kotlin
+fun hashPassword(password: String): String {
+    return BCrypt.hashpw(password, BCrypt.gensalt(12))
+}
+```
+
+**Parâmetros:**
+- `password`: Senha em texto plano
+
+**Retorno:**
+- Hash BCrypt (60 caracteres)
+
+**Exemplo:**
+```kotlin
+val hash = PasswordHasher.hashPassword("senha123")
+// Retorna: "$2a$12$kQV8..."
+```
+
+**Configuração:**
+- `BCrypt.gensalt(12)`: 12 rounds (2^12 = 4096 iterações)
+- Mais rounds = mais seguro, mas mais lento
+- 12 é o padrão recomendado
+
+---
+
+#### `checkPassword(password: String, hashedPassword: String): Boolean`
+Verifica se a senha corresponde ao hash.
+
+```kotlin
+fun checkPassword(password: String, hashedPassword: String): Boolean {
+    return try {
+        BCrypt.checkpw(password, hashedPassword)
+    } catch (e: Exception) {
+        false
+    }
+}
+```
+
+**Parâmetros:**
+- `password`: Senha fornecida pelo usuário
+- `hashedPassword`: Hash armazenado no banco
+
+**Retorno:**
+- `true`: Senha correta
+- `false`: Senha incorreta ou erro
+
+**Exemplo:**
+```kotlin
+val isCorrect = PasswordHasher.checkPassword(
+    "senha123",
+    "$2a$12$kQV8..."
+)
+```
+
+---
+
+#### `isValidPassword(password: String): Boolean`
+Valida requisitos mínimos de senha.
+
+```kotlin
+fun isValidPassword(password: String): Boolean {
+    return password.length >= 6 &&
+           password.any { it.isDigit() } &&
+           password.any { it.isLetter() }
+}
+```
+
+**Requisitos:**
+- ✅ Mínimo 6 caracteres
+- ✅ Pelo menos 1 número
+- ✅ Pelo menos 1 letra
+
+**Exemplo:**
+```kotlin
+PasswordHasher.isValidPassword("senha")    // false (sem número)
+PasswordHasher.isValidPassword("123456")   // false (sem letra)
+PasswordHasher.isValidPassword("senha1")   // true
+```
+
+---
+
+#### `getPasswordErrorMessage(password: String): String?`
+Retorna mensagem de erro ou null se válida.
+
+```kotlin
+fun getPasswordErrorMessage(password: String): String? {
+    return when {
+        password.length < 6 -> 
+            "A senha deve ter pelo menos 6 caracteres"
+        !password.any { it.isDigit() } -> 
+            "A senha deve conter pelo menos 1 número"
+        !password.any { it.isLetter() } -> 
+            "A senha deve conter pelo menos 1 letra"
+        else -> null
+    }
+}
+```
+
+**Retorno:**
+- `String`: Mensagem de erro
+- `null`: Senha válida
+
+**Uso:**
+```kotlin
+val error = PasswordHasher.getPasswordErrorMessage(senha)
+if (error != null) {
+    Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+    return
+}
+```
+
+---
+
+### 2. LocaleManager
+
+```kotlin
+object LocaleManager {
+    
+    fun setLocale(context: Context, language: String): Context {
+        val locale = Locale(language)
+        Locale.setDefault(locale)
+        
+        val config = Configuration(context.resources.configuration)
+        config.setLocale(locale)
+        
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            context.createConfigurationContext(config)
+        } else {
+            @Suppress("DEPRECATION")
+            context.resources.updateConfiguration(config, context.resources.displayMetrics)
+            context
+        }
+    }
+}
+```
+
+**Função:** Aplica locale (idioma) no contexto.
+
+**Parâmetros:**
+- `context`: Contexto da aplicação
+- `language`: Código do idioma ("pt", "en", "es")
+
+**Retorno:**
+- Novo contexto com locale aplicado
+
+**Uso na MainActivity:**
+```kotlin
+override fun attachBaseContext(newBase: Context?) {
+    if (newBase != null) {
+        val lang = runBlocking { 
+            LanguageStore.loadLanguage(newBase) 
+        }
+        val context = LocaleManager.setLocale(newBase, lang)
+        super.attachBaseContext(context)
+    } else {
+        super.attachBaseContext(newBase)
+    }
+}
+```
+
+**Compatibilidade:**
+- API 24+ (Nougat): `createConfigurationContext()`
+- API < 24: `updateConfiguration()` (deprecated)
+
+---
+
+### 3. LanguageStore (DataStore)
+
+```kotlin
+object LanguageStore {
+    
+    private val LANGUAGE_KEY = stringPreferencesKey("app_language")
+    
+    suspend fun saveLanguage(context: Context, lang: String) {
+        context.dataStore.edit { settings ->
+            settings[LANGUAGE_KEY] = lang
+        }
+    }
+    
+    suspend fun loadLanguage(context: Context): String {
+        return context.dataStore.data
+            .map { it[LANGUAGE_KEY] ?: "pt" }
+            .first()
+    }
+}
+```
+
+**Extensão do Context:**
+```kotlin
+val Context.dataStore by preferencesDataStore("settings")
+```
+
+**Métodos:**
+
+#### `saveLanguage(context: Context, lang: String)`
+Salva idioma selecionado.
+
+**Exemplo:**
+```kotlin
+CoroutineScope(Dispatchers.IO).launch {
+    LanguageStore.saveLanguage(context, "en")
+}
+```
+
+#### `loadLanguage(context: Context): String`
+Carrega idioma salvo (padrão: "pt").
+
+**Exemplo:**
+```kotlin
+val lang = runBlocking {
+    LanguageStore.loadLanguage(context)
+}
+```
+
+**Idiomas Suportados:**
+- `"pt"`: Português (Brasil)
+- `"en"`: Inglês
+- `"es"`: Espanhol
+
+---
+
+## 🔄 Fluxos de Negócio
+
+### Fluxo 1: Cadastro de Usuário
+
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant UI as RegisterScreen
+    participant PH as PasswordHasher
+    participant DAO as UserDao
+    participant DB as Database
+
+    U->>UI: Preenche formulário
+    U->>UI: Clica "Cadastrar"
+    
+    UI->>UI: Valida campos vazios
+    UI->>UI: Valida senhas coincidem
+    UI->>PH: getPasswordErrorMessage()
+    PH-->>UI: null (senha válida)
+    
+    UI->>DAO: getUserByEmail()
+    DAO->>DB: SELECT * FROM users WHERE email=?
+    DB-->>DAO: null (email não existe)
+    DAO-->>UI: null
+    
+    UI->>PH: hashPassword(senha)
+    PH-->>UI: $2a$12$...
+    
+    UI->>DAO: insert(User)
+    DAO->>DB: INSERT INTO users
+    DB-->>DAO: Success
+    DAO-->>UI: Success
+    
+    UI->>U: "Cadastro realizado!"
+    UI->>UI: navToLogin()
+```
+
+**Validações:**
+1. ✅ Campos não vazios
+2. ✅ Senha == confirmação
+3. ✅ Senha forte (6 chars, 1 número, 1 letra)
+4. ✅ Email único
+5. ✅ Hash da senha
+
+---
+
+### Fluxo 2: Login de Usuário
+
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant UI as LoginScreen
+    participant DAO as UserDao
+    participant PH as PasswordHasher
+    participant DB as Database
+
+    U->>UI: Preenche email/senha
+    U->>UI: Clica "Entrar"
+    
+    UI->>UI: Valida campos vazios
+    
+    UI->>DAO: getUserByEmail(email)
+    DAO->>DB: SELECT * FROM users WHERE email=?
+    DB-->>DAO: User{senha: $2a$12$...}
+    DAO-->>UI: User
+    
+    UI->>PH: checkPassword(senhaInput, user.senha)
+    PH-->>UI: true
+    
+    UI->>U: "Login bem-sucedido"
+    UI->>UI: navToMain()
+```
+
+**Casos de Erro:**
+- Email não encontrado → `getUserByEmail()` retorna null
+- Senha errada → `checkPassword()` retorna false
+
+---
+
+### Fluxo 3: Criar Anúncio
+
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant UI as AnunciosScreen
+    participant Dialog as CustomCarDialog
+    participant CarDAO as CarDao
+    participant PosterDAO as PosterDao
+    participant ImgDAO as PosterImageDao
+    participant DB as Database
+
+    U->>UI: Clica FAB "+"
+    UI->>Dialog: Abre diálogo
+    
+    U->>Dialog: Preenche dados do carro
+    U->>Dialog: Seleciona imagens (até 5)
+    U->>Dialog: Clica "Salvar"
+    
+    Dialog->>CarDAO: insertCar(car)
+    CarDAO->>DB: INSERT INTO cars
+    DB-->>CarDAO: carId
+    CarDAO-->>Dialog: carId
+    
+    Dialog->>PosterDAO: insert(poster)
+    PosterDAO->>DB: INSERT INTO posters
+    DB-->>PosterDAO: posterId
+    PosterDAO-->>Dialog: posterId
+    
+    loop Para cada imagem
+        Dialog->>ImgDAO: insert(PosterImage)
+        ImgDAO->>DB: INSERT INTO posters_images
+    end
+    
+    Dialog-->>UI: Success
+    UI->>UI: Recarrega lista
+    UI->>U: "Anúncio criado!"
+```
+
+**Dados Necessários:**
+- **Carro:** marca, modelo, cor, ano, km, combustível, categoria, acessórios
+- **Poster:** título, descrição, preço, imagem principal
+- **Imagens:** 0-5 imagens adicionais
+
+---
+
+### Fluxo 4: Editar Anúncio
+
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant UI as AnunciosScreen
+    participant Dialog as CustomCarDialog
+    participant CarDAO as CarDao
+    participant PosterDAO as PosterDao
+    participant ImgDAO as PosterImageDao
+    participant DB as Database
+
+    U->>UI: Clica "Editar" em um anúncio
+    UI->>Dialog: Abre com dados existentes
+    
+    Dialog->>CarDAO: getCarById(carId)
+    Dialog->>PosterDAO: getById(posterId)
+    Dialog->>ImgDAO: getByPosterId(posterId)
+    
+    U->>Dialog: Modifica dados
+    U->>Dialog: Clica "Salvar"
+    
+    Dialog->>CarDAO: updateCar(car)
+    CarDAO->>DB: UPDATE cars SET ... WHERE id=?
+    
+    Dialog->>PosterDAO: update(poster)
+    PosterDAO->>DB: UPDATE posters SET ... WHERE id=?
+    
+    alt Imagens mudaram
+        Dialog->>ImgDAO: deleteByPosterId(posterId)
+        loop Novas imagens
+            Dialog->>ImgDAO: insert(PosterImage)
+        end
+    end
+    
+    Dialog-->>UI: Success
+    UI->>UI: Recarrega lista
+    UI->>U: "Anúncio atualizado!"
+```
+
+---
+
+### Fluxo 5: Deletar Anúncio
+
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant UI as AnunciosScreen
+    participant PosterDAO as PosterDao
+    participant ImgDAO as PosterImageDao
+    participant CarDAO as CarDao
+    participant DB as Database
+
+    U->>UI: Clica "Deletar" em um anúncio
+    UI->>U: Confirma exclusão
+    U->>UI: Confirma
+    
+    UI->>ImgDAO: deleteByPosterId(posterId)
+    ImgDAO->>DB: DELETE FROM posters_images WHERE posterId=?
+    
+    UI->>PosterDAO: delete(poster)
+    PosterDAO->>DB: DELETE FROM posters WHERE id=?
+    
+    alt Carro não tem mais anúncios
+        UI->>CarDAO: deleteCar(car)
+        CarDAO->>DB: DELETE FROM cars WHERE id=?
+    end
+    
+    UI->>UI: Recarrega lista
+    UI->>U: "Anúncio deletado!"
+```
+
+**Observação:** Com ForeignKey CASCADE, deleting poster automaticamente deleta imagens.
+
+---
+
+### Fluxo 6: Ver Detalhes do Carro
+
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant List as AnunciosScreen
+    participant Detail as CarDetailScreen
+    participant CarDAO as CarDao
+    participant PosterDAO as PosterDao
+    participant ImgDAO as PosterImageDao
+    participant DB as Database
+
+    U->>List: Clica em um anúncio
+    List->>Detail: Navega com carId
+    
+    Detail->>CarDAO: getCarById(carId)
+    CarDAO->>DB: SELECT * FROM cars WHERE id=?
+    DB-->>CarDAO: Car
+    CarDAO-->>Detail: Car
+    
+    Detail->>PosterDAO: getByCarId(carId)
+    PosterDAO->>DB: SELECT * FROM posters WHERE carId=?
+    DB-->>PosterDAO: Poster
+    PosterDAO-->>Detail: Poster
+    
+    Detail->>ImgDAO: getByPosterId(posterId)
+    ImgDAO->>DB: SELECT * FROM posters_images WHERE posterId=?
+    DB-->>ImgDAO: List<PosterImage>
+    ImgDAO-->>Detail: List<ByteArray>
+    
+    Detail->>U: Exibe detalhes completos
+```
+
+---
+
+### Fluxo 7: Troca de Idioma
+
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant UI as AnunciosScreen
+    participant MA as MainActivity
+    participant LS as LanguageStore
+    participant LM as LocaleManager
+    participant DS as DataStore
+
+    U->>UI: Clica menu idiomas
+    U->>UI: Seleciona idioma (ex: "en")
+    
+    UI->>MA: changeLanguage("en")
+    
+    MA->>LS: saveLanguage(context, "en")
+    LS->>DS: edit { settings[LANGUAGE_KEY] = "en" }
+    DS-->>LS: Success
+    LS-->>MA: Success
+    
+    MA->>LM: setLocale(context, "en")
+    LM-->>MA: New context
+    
+    MA->>MA: recreate()
+    
+    Note over MA: Activity é recriada
+    
+    MA->>LS: loadLanguage()
+    LS->>DS: data.map { it[LANGUAGE_KEY] }
+    DS-->>LS: "en"
+    LS-->>MA: "en"
+    
+    MA->>LM: setLocale(context, "en")
+    MA->>MA: attachBaseContext(newContext)
+    
+    MA->>U: App em inglês
+```
+
+**Idiomas Disponíveis:**
+- Português: `values/strings.xml`
+- Inglês: `values-en/strings.xml`
+- Espanhol: `values-es/strings.xml`
+
+---
+
+## 📊 Referência de APIs
+
+### Estados e Observação
+
+#### Flow (Kotlin Coroutines)
+```kotlin
+// DAO retorna Flow
+fun getAllCars(): Flow<List<Car>>
+
+// Observação em Composable
+LaunchedEffect(Unit) {
+    carDao.getAllCars().collect { cars ->
+        // Atualiza automaticamente quando banco muda
+        carsList = cars
+    }
+}
+```
+
+#### State (Jetpack Compose)
+```kotlin
+// Estado mutável
+var email by remember { mutableStateOf("") }
+
+// Estado derivado
+val isValid by remember {
+    derivedStateOf { email.contains("@") }
+}
+
+// Estado salvo (sobrevive a rotação)
+var counter by rememberSaveable { mutableStateOf(0) }
+```
+
+---
+
+### Coroutines (Operações Assíncronas)
+
+#### Dispatchers
+```kotlin
+// IO - Operações de I/O (banco, rede)
+CoroutineScope(Dispatchers.IO).launch {
+    val user = db.userDao().getUserByEmail(email)
+}
+
+// Main - Atualiza UI
+withContext(Dispatchers.Main) {
+    Toast.makeText(context, "Sucesso!", ...).show()
+}
+
+// Default - Cálculos pesados
+withContext(Dispatchers.Default) {
+    val result = complexCalculation()
+}
+```
+
+#### LaunchedEffect
+```kotlin
+// Executa quando key muda
+LaunchedEffect(carId) {
+    val car = db.carDao().getCarById(carId)
+    // ...
+}
+
+// Executa uma vez
+LaunchedEffect(Unit) {
+    // Carrega dados iniciais
+}
+```
+
+---
+
+### Room Database
+
+#### Anotações Principais
+
+| Anotação | Uso | Exemplo |
+|----------|-----|---------|
+| `@Entity` | Define tabela | `@Entity(tableName = "users")` |
+| `@PrimaryKey` | Chave primária | `@PrimaryKey(autoGenerate = true)` |
+| `@ColumnInfo` | Nome da coluna | `@ColumnInfo(name = "user_name")` |
+| `@ForeignKey` | Chave estrangeira | `@ForeignKey(...)` |
+| `@Index` | Índice | `@Index(value = ["email"], unique = true)` |
+| `@TypeConverter` | Converte tipos | `@TypeConverter fun fromList(...)` |
+| `@Dao` | Data Access Object | `@Dao interface UserDao` |
+| `@Database` | Define banco | `@Database(entities = [...])` |
+| `@Insert` | Insere dados | `@Insert suspend fun insert(...)` |
+| `@Update` | Atualiza dados | `@Update suspend fun update(...)` |
+| `@Delete` | Deleta dados | `@Delete suspend fun delete(...)` |
+| `@Query` | Query customizada | `@Query("SELECT * FROM users")` |
+
+#### Tipos de Retorno
+
+```kotlin
+// Retorno direto (uma vez)
+@Query("SELECT * FROM cars")
+suspend fun getAllCars(): List<Car>
+
+// Observable (atualiza automaticamente)
+@Query("SELECT * FROM cars")
+fun getAllCars(): Flow<List<Car>>
+
+// Retorno simples (sem suspend)
+@Query("SELECT COUNT(*) FROM cars")
+fun getCarCount(): Int
+
+// Insert retorna ID gerado
+@Insert
+suspend fun insert(car: Car): Long
+```
+
+---
+
+### Jetpack Compose
+
+#### Modifiers Comuns
+```kotlin
+Modifier
+    .fillMaxWidth()              // Largura total
+    .fillMaxHeight()             // Altura total
+    .fillMaxSize()               // Largura e altura total
+    .padding(16.dp)              // Padding
+    .size(100.dp)                // Tamanho fixo
+    .weight(1f)                  // Peso em Row/Column
+    .clip(RoundedCornerShape(8.dp))  // Bordas arredondadas
+    .background(Color.White)     // Cor de fundo
+    .clickable { }               // Clicável
+    .verticalScroll(state)       // Scroll vertical
+```
+
+#### Componentes Principais
+```kotlin
+// Texto
+Text(
+    text = "Hello",
+    fontSize = 16.sp,
+    fontWeight = FontWeight.Bold,
+    color = Color.Black
+)
+
+// Campo de texto
+OutlinedTextField(
+    value = text,
+    onValueChange = { text = it },
+    label = { Text("Label") }
+)
+
+// Botão
+Button(onClick = { }) {
+    Text("Clique aqui")
+}
+
+// Imagem
+Image(
+    painter = painterResource(R.drawable.logo),
+    contentDescription = "Logo"
+)
+
+// Loading
+CircularProgressIndicator()
+
+// Layout
+Column(
+    modifier = Modifier.fillMaxSize(),
+    verticalArrangement = Arrangement.Center,
+    horizontalAlignment = Alignment.CenterHorizontally
+) {
+    // Conteúdo
+}
+```
+
+---
+
+## 📝 Convenções de Código
+
+### Nomenclatura
+
+#### Classes e Interfaces
+```kotlin
+// PascalCase
+class UserDao
+class AppDatabase
+interface PosterDao
+```
+
+#### Funções e Variáveis
+```kotlin
+// camelCase
+fun getUserByEmail()
+val isLoading = false
+```
+
+#### Constantes
+```kotlin
+// UPPER_SNAKE_CASE
+const val MAX_IMAGES = 5
+private val LANGUAGE_KEY = stringPreferencesKey("app_language")
+```
+
+### Estrutura de Arquivo
+```kotlin
+// 1. Package
+package com.example.luxcar.data.model
+
+// 2. Imports
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+// 3. Classe/Interface
+@Entity(tableName = "users")
+data class User(
+    @PrimaryKey(autoGenerate = true) 
+    val id: Long = 0L,
+    val nome: String,
+    val email: String,
+    val senha: String
+)
+```
+
+---
+
+## 🎓 Boas Práticas Implementadas
+
+### ✅ Segurança
+- Senhas hasheadas com BCrypt (12 rounds)
+- Email único no banco (Index UNIQUE)
+- Validação de senha forte
+- Sem dados sensíveis em logs
+
+### ✅ Performance
+- Índices em ForeignKeys
+- Flow para observação eficiente
+- Singleton thread-safe
+- LaunchedEffect para carregamento assíncrono
+
+### ✅ Manutenibilidade
+- Separação de responsabilidades (DAOs, Models, UI)
+- Código documentado
+- Nomenclatura consistente
+- TypeConverters para tipos complexos
+
+### ✅ UX/UI
+- Loading states
+- Mensagens de erro claras
+- Acessibilidade (ajuste de fonte)
+- Internacionalização (3 idiomas)
+
+### ✅ Testes
+- Testes unitários para lógica de negócio
+- Validações isoladas
+- Cobertura de casos de erro
+
+---
+
+## 🔍 Troubleshooting
+
+### Problemas Comuns
+
+#### "Cannot find symbol: PasswordHasher"
+**Causa:** Classe não encontrada  
+**Solução:** Rebuild Project
+
+#### "FOREIGN KEY constraint failed"
+**Causa:** Tentando inserir poster com carId inexistente  
+**Solução:** Verificar que o carro existe antes
+
+#### "Unique constraint violated"
+**Causa:** Email duplicado  
+**Solução:** Validar email antes de inserir
+
+#### "Type mismatch: required Long, found Int"
+**Causa:** Versão antiga do código  
+**Solução:** Atualizar todos os IDs para Long
+
+---
+
+## 📚 Recursos Adicionais
+
+### Documentação Oficial
+- [Room Database](https://developer.android.com/training/data-storage/room)
+- [Jetpack Compose](https://developer.android.com/jetpack/compose)
+- [Kotlin Coroutines](https://kotlinlang.org/docs/coroutines-overview.html)
+- [DataStore](https://developer.android.com/topic/libraries/architecture/datastore)
+- [BCrypt](https://github.com/jeremyh/jBCrypt)
+
+### Referências do Projeto
+- **Versão do Banco:** 12
+- **Versão Mínima Android:** API 21 (Lollipop)
+- **Linguagem:** Kotlin 1.9+
+- **Gradle:** 8.0+
+- **Android Studio:** Hedgehog 2023.1.1+
+
+---
+
+**Fim da Documentação Técnica**  
+**Versão:** 1.0  
+**Data:** Novembro 2024  
+**Projeto:** LuxCar - Marketplace de Veículos de Luxo
