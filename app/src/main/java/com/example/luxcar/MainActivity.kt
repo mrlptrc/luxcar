@@ -6,9 +6,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.room.Room
 import com.example.luxcar.data.LanguageStore
+import com.example.luxcar.data.database.DatabaseBuilder
 import com.example.luxcar.data.database.AppDatabase
+import com.example.luxcar.data.repository.AuthRepository
+import com.example.luxcar.presentation.LoginViewModel
 import com.example.luxcar.ui.screens.*
 import com.example.luxcar.utils.LocaleManager
 import com.example.luxcar.ui.theme.LuxcarTheme
@@ -20,17 +22,13 @@ class MainActivity : ComponentActivity() {
     private var savedLanguage: String = "pt"
     private var currentScreenState: String = "login"
 
-    // --- FUNÇÃO QUE MUDA O IDIOMA ---
     fun changeLanguage(lang: String) {
-        // salva idioma no DataStore
         runBlocking {
             LanguageStore.saveLanguage(this@MainActivity, lang)
         }
 
-        // aplica o locale
         LocaleManager.setLocale(this, lang)
 
-        // recria activity mantendo "currentScreen"
         recreate()
     }
 
@@ -49,16 +47,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // --- inicializa banco ---
-        db = Room.databaseBuilder(
-            applicationContext,
-            AppDatabase::class.java,
-            "luxcar-db"
-        )
-            .fallbackToDestructiveMigration()
-            .build()
+        db = DatabaseBuilder.getInstance(applicationContext)
 
-        // restaura tela atual
         val initialScreen = savedInstanceState?.getString("currentScreen") ?: "login"
 
         setContent {
@@ -68,9 +58,11 @@ class MainActivity : ComponentActivity() {
 
                 when (currentScreen) {
                     "login" -> LoginScreen(
+                        viewModel = LoginViewModel(
+                            AuthRepository(db)
+                        ),
                         navToRegister = { currentScreen = "cadastro" },
                         navToMain = { currentScreen = "anuncios" },
-                        db = db
                     )
                     "cadastro" -> RegisterScreen(
                         navToLogin = { currentScreen = "login" },
@@ -89,7 +81,7 @@ class MainActivity : ComponentActivity() {
                     )
                     else -> {
                         if (currentScreen.startsWith("carDetail/")) {
-                            val carId = currentScreen.removePrefix("carDetail/").toInt()
+                            val carId = currentScreen.removePrefix("carDetail/").toLong()
                             CarDetailScreen(
                                 db = db,
                                 carId = carId,

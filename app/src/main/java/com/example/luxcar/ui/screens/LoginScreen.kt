@@ -20,46 +20,51 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.luxcar.R
-import com.example.luxcar.data.database.AppDatabase
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.example.luxcar.presentation.LoginViewModel
 
 @Composable
 fun LoginScreen(
+    viewModel: LoginViewModel,
     navToRegister: () -> Unit,
-    navToMain: () -> Unit,
-    db: AppDatabase
+    navToMain: () -> Unit
 ) {
+    val state by viewModel.uiState
     val context = LocalContext.current
-    var email by remember { mutableStateOf("") }
-    var senha by remember { mutableStateOf("") }
-    var fontScale by remember { mutableStateOf(1f) }
     val Orange = Color(0xFFFF9800)
+
+    val forgotPasswordMessage = stringResource(R.string.forgot_password_message)
+    val forgotPasswordText = stringResource(R.string.forgot_password)
+    LaunchedEffect(state.loginSuccess) {
+        if (state.loginSuccess) navToMain()
+    }
+
+    LaunchedEffect(state.errorMessage) {
+        state.errorMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearError()
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
 
-        // logo
         Image(
             painter = painterResource(id = R.drawable.normalgroup),
-            contentDescription = stringResource(id = R.string.logo_description),
+            contentDescription = stringResource(R.string.logo_description),
             modifier = Modifier
                 .size(140.dp)
                 .padding(bottom = 32.dp)
         )
 
-        // título
         Text(
-            stringResource(R.string.login_title),
-            fontSize = (28.sp.value * fontScale).sp,
+            text = stringResource(R.string.login_title),
+            fontSize = 28.sp * state.fontScale,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF212121)
         )
@@ -67,26 +72,21 @@ fun LoginScreen(
         Spacer(Modifier.height(8.dp))
 
         Text(
-            stringResource(R.string.login_subtitle),
-            fontSize = (14.sp.value * fontScale).sp,
+            text = stringResource(R.string.login_subtitle),
+            fontSize = 14.sp * state.fontScale,
             color = Color(0xFF757575),
             textAlign = TextAlign.Center
         )
 
         Spacer(Modifier.height(40.dp))
 
-        // campos
         OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = {
-                Text(
-                    stringResource(R.string.email),
-                    fontSize = (14.sp.value * fontScale).sp
-                )
-            },
+            value = state.email,
+            onValueChange = viewModel::onEmailChange,
+            label = { Text(stringResource(R.string.email)) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
+            enabled = !state.isLoading,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Orange,
                 focusedLabelColor = Orange
@@ -96,17 +96,13 @@ fun LoginScreen(
         Spacer(Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = senha,
-            onValueChange = { senha = it },
-            label = {
-                Text(
-                    stringResource(R.string.password),
-                    fontSize = (14.sp.value * fontScale).sp
-                )
-            },
-            visualTransformation = PasswordVisualTransformation(),
+            value = state.senha,
+            onValueChange = viewModel::onSenhaChange,
+            label = { Text(stringResource(R.string.password)) },
             modifier = Modifier.fillMaxWidth(),
+            visualTransformation = PasswordVisualTransformation(),
             shape = RoundedCornerShape(12.dp),
+            enabled = !state.isLoading,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Orange,
                 focusedLabelColor = Orange
@@ -115,93 +111,89 @@ fun LoginScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        // botão login
         Button(
-            onClick = {
-                CoroutineScope(Dispatchers.IO).launch {
-                    val user = db.userDao().login(email, senha)
-                    withContext(Dispatchers.Main) {
-                        if (user != null) navToMain()
-                        else Toast.makeText(
-                            context,
-                            context.getString(R.string.login_error),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
-            },
+            onClick = { viewModel.login() },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Orange),
-            shape = RoundedCornerShape(12.dp)
+            enabled = !state.isLoading,
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Orange)
         ) {
-            Text(
-                stringResource(R.string.login_button),
-                fontSize = (16.sp.value * fontScale).sp,
-                fontWeight = FontWeight.SemiBold
-            )
+            if (state.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = Color.White
+                )
+            } else {
+                Text(
+                    stringResource(R.string.login_button),
+                    fontSize = 16.sp * state.fontScale,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
 
         Spacer(Modifier.height(8.dp))
 
-        // esqueci a senha
-        TextButton(onClick = {
-            Toast.makeText(
-                context,
-                context.getString(R.string.forgot_password_message),
-                Toast.LENGTH_LONG
-            ).show()
-        }) {
+        TextButton(
+            onClick = {
+                Toast.makeText(
+                    context,
+                    forgotPasswordMessage,
+                    Toast.LENGTH_LONG
+                ).show()
+            },
+            enabled = !state.isLoading
+        ) {
             Text(
-                stringResource(R.string.forgot_password),
-                fontSize = (13.sp.value * fontScale).sp,
+                forgotPasswordText,
+                fontSize = 13.sp * state.fontScale,
                 color = Color(0xFF757575)
             )
         }
 
         Spacer(Modifier.height(8.dp))
 
-        // link cadastro
-        TextButton(onClick = navToRegister) {
+        TextButton(
+            onClick = navToRegister,
+            enabled = !state.isLoading
+        ) {
             Text(
-                stringResource(R.string.register_link),
-                fontSize = (14.sp.value * fontScale).sp,
+                stringResource(R.string.register),
+                fontSize = 14.sp * state.fontScale,
                 color = Orange
             )
         }
 
         Spacer(Modifier.height(32.dp))
 
-        // controles de fonte
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+
             OutlinedButton(
-                onClick = { fontScale += 0.1f },
+                onClick = { viewModel.increaseFont() },
                 shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Orange
-                )
+                enabled = !state.isLoading,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Orange)
             ) {
                 Text(
                     stringResource(R.string.font_increase),
-                    fontSize = (14.sp.value * fontScale).sp
+                    fontSize = 14.sp * state.fontScale
                 )
             }
 
             OutlinedButton(
-                onClick = { fontScale = (fontScale - 0.1f).coerceAtLeast(0.8f) },
+                onClick = { viewModel.decreaseFont() },
                 shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Orange
-                )
+                enabled = !state.isLoading,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Orange)
             ) {
                 Text(
                     stringResource(R.string.font_decrease),
-                    fontSize = (14.sp.value * fontScale).sp
+                    fontSize = 14.sp * state.fontScale
                 )
             }
         }
     }
 }
+

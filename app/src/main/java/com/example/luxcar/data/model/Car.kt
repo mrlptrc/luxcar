@@ -6,7 +6,7 @@ import androidx.room.TypeConverter
 
 @Entity(tableName = "cars")
 data class Car (
-    @PrimaryKey(autoGenerate = true) val id: Int=0,
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
     val marca: String,
     val modelo: String,
     val cor: String,
@@ -17,11 +17,11 @@ data class Car (
     val acessorios: List<String>
 )
 
-class Converters{
+class Converters {
     @TypeConverter
     fun fromList(list: List<String>): String = list.joinToString(",")
 
     @TypeConverter
     fun toList(data: String): List<String> =
-            if(data.isEmpty()) emptyList() else data.split(",")
+        if(data.isEmpty()) emptyList() else data.split(",")
 }

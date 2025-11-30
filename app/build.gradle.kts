@@ -10,19 +10,16 @@ android {
     namespace = "com.example.luxcar"
     compileSdk = 36
 
-    testOptions {
-        execution = "ANDROIDX_TEST_ORCHESTRATOR"
-        animationsDisabled = true
-        reportDir = file("$buildDir/reports/tests").toString()
-    }
-
     defaultConfig {
         applicationId = "com.example.luxcar"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+
+        // Runner obrigatório para o Orchestrator
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments["clearPackageData"] = "true"
     }
 
     buildTypes {
@@ -33,6 +30,17 @@ android {
                 "proguard-rules.pro"
             )
         }
+    }
+
+    testOptions {
+        // Ativa o ORCHESTRATOR
+        execution = "ANDROIDX_TEST_ORCHESTRATOR"
+
+        // Desativa animações
+        animationsDisabled = true
+
+        // Habilita recursos no teste unitário
+        unitTests.isIncludeAndroidResources = true
     }
 
     compileOptions {
@@ -51,61 +59,45 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"
     }
-
-    testOptions {
-        unitTests.isIncludeAndroidResources = true
-    }
-
-    sourceSets {
-        getByName("androidTest").java.srcDirs("src/androidTest/java")
-    }
-}
-
-tasks.matching { it is KspTask }.configureEach {
-    onlyIf {
-        !gradle.startParameter.taskNames.any { it.contains("connectedDebugAndroidTest") }
-    }
-}
-
-configurations.all {
-    resolutionStrategy {
-        force("androidx.test.espresso:espresso-core:3.5.0")
-    }
 }
 
 dependencies {
+
+    // ORCHESTRATOR (obrigatório para run orchestration)
+    androidTestUtil("androidx.test:orchestrator:1.4.2")
+
+    // CORE
+    implementation("org.mindrot:jbcrypt:0.4")
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("androidx.activity:activity-compose:1.8.2")
-
     implementation("androidx.datastore:datastore-preferences:1.1.1")
-    implementation("androidx.datastore:datastore-preferences-core:1.1.1")
+
+    // COMPOSE + BOM
     implementation(platform("androidx.compose:compose-bom:2025.09.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.junit.ktx)
-    implementation(libs.androidx.ui.test.junit4)
-    implementation(libs.ui)
-    implementation(libs.androidx.compose.foundation.layout)
-    implementation(libs.androidx.compose.runtime.saveable)
+
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // ROOM
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
+
+    // OUTROS
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.cardview:cardview:1.0.0")
-
-    implementation("androidx.room:room-runtime:2.6.1")
-    ksp("androidx.room:room-compiler:2.5.2")
-    implementation("androidx.room:room-ktx:2.6.1")
-
     implementation("io.coil-kt:coil-compose:2.5.0")
 
+    // UNIT TEST
     testImplementation("junit:junit:4.13.2")
+
+    // ANDROID TESTS
+    androidTestImplementation(platform("androidx.compose:compose-bom:2025.09.00"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.0")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    implementation(kotlin("test"))
 }

@@ -14,8 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -32,9 +30,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.example.luxcar.R
 
+/**
+ * Tela de detalhes do carro
+ * ✅ CORRIGIDO: Parâmetro carId agora é Long
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CarDetailScreen(db: AppDatabase, carId: Int, onBack: () -> Unit, logoResId: Int) {
+fun CarDetailScreen(
+    db: AppDatabase,
+    carId: Long, // ✅ Long em vez de Int
+    onBack: () -> Unit,
+    logoResId: Int
+) {
     var car by remember { mutableStateOf<Car?>(null) }
     var poster by remember { mutableStateOf<Poster?>(null) }
     var images by remember { mutableStateOf(listOf<ByteArray>()) }
@@ -42,9 +49,37 @@ fun CarDetailScreen(db: AppDatabase, carId: Int, onBack: () -> Unit, logoResId: 
     val Orange = Color(0xFFFF9800)
     val LightGray = Color(0xFFF5F5F5)
 
+    val tiposCombustivelMap = mapOf(
+        "fuel_gas" to stringResource(R.string.fuel_gas),
+        "fuel_alcohol" to stringResource(R.string.fuel_alcohol),
+        "fuel_diesel" to stringResource(R.string.fuel_diesel),
+        "fuel_flex" to stringResource(R.string.fuel_flex),
+        "fuel_electric" to stringResource(R.string.fuel_electric)
+    )
+
+    val tiposCategoriaMap = mapOf(
+        "cat_sedan" to stringResource(R.string.cat_sedan),
+        "cat_hatch" to stringResource(R.string.cat_hatch),
+        "cat_suv" to stringResource(R.string.cat_suv),
+        "cat_pickup" to stringResource(R.string.cat_pickup),
+        "cat_minivan" to stringResource(R.string.cat_minivan)
+    )
+
+    val acessoriosMap = mapOf(
+        "acc_ac" to stringResource(R.string.acc_ac),
+        "acc_abs" to stringResource(R.string.acc_abs),
+        "acc_airbag" to stringResource(R.string.acc_airbag),
+        "acc_camera" to stringResource(R.string.acc_camera)
+    )
+
     LaunchedEffect(carId) {
-        val loadedCar = withContext(Dispatchers.IO) { db.carDao().getCarById(carId.toLong()) }
-        val loadedPoster = withContext(Dispatchers.IO) { db.posterDao().getByCarId(carId) }
+        // ✅ CORRIGIDO: Não precisa mais converter para Long
+        val loadedCar = withContext(Dispatchers.IO) {
+            db.carDao().getCarById(carId)
+        }
+        val loadedPoster = withContext(Dispatchers.IO) {
+            db.posterDao().getByCarId(carId)
+        }
         val loadedImages = loadedPoster?.let {
             withContext(Dispatchers.IO) {
                 db.posterImageDao().getByPosterId(it.id).mapNotNull { img -> img.image }
@@ -205,11 +240,11 @@ fun CarDetailScreen(db: AppDatabase, carId: Int, onBack: () -> Unit, logoResId: 
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             DetailBadge(
-                                text = c.categoria,
+                                text = tiposCategoriaMap[c.categoria] ?: c.categoria,
                                 fontScale = fontScale
                             )
                             DetailBadge(
-                                text = c.combustivel,
+                                text = tiposCombustivelMap[c.combustivel] ?: c.combustivel,
                                 fontScale = fontScale
                             )
                         }
@@ -235,7 +270,9 @@ fun CarDetailScreen(db: AppDatabase, carId: Int, onBack: () -> Unit, logoResId: 
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 c.acessorios.forEach { acc ->
-                                    DetailBadge(text = acc, fontScale = fontScale)
+                                    DetailBadge(
+                                        text = acessoriosMap[acc] ?: acc,
+                                        fontScale = fontScale)
                                 }
                             }
                         }

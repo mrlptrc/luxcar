@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.example.luxcar.R
 import com.example.luxcar.data.database.AppDatabase
 import com.example.luxcar.data.model.User
+import com.example.luxcar.utils.PasswordHasher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,6 +39,7 @@ fun RegisterScreen(
     var senha by remember { mutableStateOf("") }
     var confirmSenha by remember { mutableStateOf("") }
     var fontScale by remember { mutableStateOf(1f) }
+    var isLoading by remember { mutableStateOf(false) }
     val Orange = Color(0xFFFF9800)
 
     Column(
@@ -77,7 +79,7 @@ fun RegisterScreen(
 
         Spacer(Modifier.height(32.dp))
 
-        // campos
+        // campo nome
         OutlinedTextField(
             value = nome,
             onValueChange = { nome = it },
@@ -92,11 +94,13 @@ fun RegisterScreen(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Orange,
                 focusedLabelColor = Orange
-            )
+            ),
+            enabled = !isLoading
         )
 
         Spacer(Modifier.height(16.dp))
 
+        // campo email
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
@@ -111,11 +115,13 @@ fun RegisterScreen(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Orange,
                 focusedLabelColor = Orange
-            )
+            ),
+            enabled = !isLoading
         )
 
         Spacer(Modifier.height(16.dp))
 
+        // campo senha
         OutlinedTextField(
             value = senha,
             onValueChange = { senha = it },
@@ -131,11 +137,13 @@ fun RegisterScreen(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Orange,
                 focusedLabelColor = Orange
-            )
+            ),
+            enabled = !isLoading
         )
 
         Spacer(Modifier.height(16.dp))
 
+        // campo confirmar senha
         OutlinedTextField(
             value = confirmSenha,
             onValueChange = { confirmSenha = it },
@@ -151,7 +159,8 @@ fun RegisterScreen(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Orange,
                 focusedLabelColor = Orange
-            )
+            ),
+            enabled = !isLoading
         )
 
         Spacer(Modifier.height(24.dp))
@@ -159,6 +168,16 @@ fun RegisterScreen(
         // botão cadastrar
         Button(
             onClick = {
+                // ✅ VALIDAÇÕES
+                if (nome.isBlank() || email.isBlank() || senha.isBlank()) {
+                    Toast.makeText(
+                        context,
+                        "Preencha todos os campos",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@Button
+                }
+
                 if (senha != confirmSenha) {
                     Toast.makeText(
                         context,
@@ -168,9 +187,43 @@ fun RegisterScreen(
                     return@Button
                 }
 
+                // ✅ VALIDA SENHA FORTE
+                val passwordError = PasswordHasher.getPasswordErrorMessage(senha)
+                if (passwordError != null) {
+                    Toast.makeText(context, passwordError, Toast.LENGTH_LONG).show()
+                    return@Button
+                }
+
+                isLoading = true
+
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        db.userDao().insert(User(nome = nome, email = email, senha = senha))
+                        // ✅ VERIFICA SE EMAIL JÁ EXISTE
+                        val existingUser = db.userDao().getUserByEmail(email)
+                        if (existingUser != null) {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(
+                                    context,
+                                    "Email já cadastrado",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                isLoading = false
+                            }
+                            return@launch
+                        }
+
+                        // ✅ CRIA HASH DA SENHA
+                        val hashedPassword = PasswordHasher.hashPassword(senha)
+
+                        // ✅ INSERE USUÁRIO COM SENHA HASHEADA
+                        db.userDao().insert(
+                            User(
+                                nome = nome,
+                                email = email,
+                                senha = hashedPassword
+                            )
+                        )
+
                         withContext(Dispatchers.Main) {
                             Toast.makeText(
                                 context,
@@ -183,9 +236,10 @@ fun RegisterScreen(
                         withContext(Dispatchers.Main) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.register_error, e.message),
+                                "Erro: ${e.message}",
                                 Toast.LENGTH_LONG
                             ).show()
+                            isLoading = false
                         }
                     }
                 }
@@ -194,19 +248,30 @@ fun RegisterScreen(
                 .fillMaxWidth()
                 .height(56.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Orange),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            enabled = !isLoading
         ) {
-            Text(
-                stringResource(R.string.register_button),
-                fontSize = (16.sp.value * fontScale).sp,
-                fontWeight = FontWeight.SemiBold
-            )
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = Color.White
+                )
+            } else {
+                Text(
+                    stringResource(R.string.register_button),
+                    fontSize = (16.sp.value * fontScale).sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
 
         Spacer(Modifier.height(16.dp))
 
         // link voltar
-        TextButton(onClick = navToLogin) {
+        TextButton(
+            onClick = navToLogin,
+            enabled = !isLoading
+        ) {
             Text(
                 stringResource(R.string.back_to_login),
                 fontSize = (14.sp.value * fontScale).sp,
@@ -225,7 +290,8 @@ fun RegisterScreen(
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = Orange
-                )
+                ),
+                enabled = !isLoading
             ) {
                 Text(
                     stringResource(R.string.font_increase),
@@ -238,7 +304,8 @@ fun RegisterScreen(
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = Orange
-                )
+                ),
+                enabled = !isLoading
             ) {
                 Text(
                     stringResource(R.string.font_decrease),

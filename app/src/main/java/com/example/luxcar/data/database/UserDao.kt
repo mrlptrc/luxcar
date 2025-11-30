@@ -7,9 +7,19 @@ import com.example.luxcar.data.model.User
 
 @Dao
 interface UserDao {
-    @Insert
-    suspend fun insert(user: User) // cadastra usuario
 
-    @Query("SELECT * FROM users WHERE email = :email AND senha = :senha")
-    suspend fun login(email: String, senha: String): User? // procura se o email e a senha existe no banco e faz login
+    @Insert
+    suspend fun insert(user: User)
+
+    @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
+    suspend fun getUserByEmail(email: String): User?
+
+    suspend fun findByEmail(email: String): User? {
+        return getUserByEmail(email) }
+
+    @Query("SELECT * FROM users")
+    suspend fun getAllUsers(): List<User>
+
+    @Query("DELETE FROM users WHERE id = :userId")
+    suspend fun deleteUserById(userId: Int)
 }

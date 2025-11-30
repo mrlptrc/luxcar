@@ -11,23 +11,33 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface CarDao {
 
-    // insere o objeto carro para criar novo carro
     @Insert
     suspend fun insertCar(car: Car): Long
 
-    // deleta o obj carro
     @Delete
     suspend fun deleteCar(car: Car): Int
 
-    // atualiza o obj carro
     @Update
     suspend fun updateCar(car: Car)
 
-    // busca carro pelo id dele
-    @Query("SELECT * FROM cars WHERE id = :id")
+    @Query("SELECT * FROM cars WHERE id = :id LIMIT 1")
     suspend fun getCarById(id: Long): Car?
 
-    // flow cars permite busca automaticas da lista de carros
-    @Query("SELECT * FROM cars")
+    @Query("SELECT * FROM cars ORDER BY id DESC")
     fun getAllCars(): Flow<List<Car>>
+
+    @Query("SELECT * FROM cars ORDER BY id DESC")
+    suspend fun getAllCarsList(): List<Car>
+
+    @Query("SELECT * FROM cars WHERE marca LIKE '%' || :marca || '%'")
+    suspend fun getCarsByMarca(marca: String): List<Car>
+
+    @Query("SELECT * FROM cars WHERE ano = :ano")
+    suspend fun getCarsByAno(ano: Int): List<Car>
+
+    @Query("DELETE FROM cars WHERE id = :carId")
+    suspend fun deleteById(carId: Long)
+
+    @Query("SELECT COUNT(*) FROM cars")
+    suspend fun getCarCount(): Int
 }

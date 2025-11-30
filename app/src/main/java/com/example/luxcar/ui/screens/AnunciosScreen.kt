@@ -42,6 +42,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.example.luxcar.R
 import kotlinx.coroutines.withContext
+import kotlin.collections.forEach
 
 // ============================================
 // TELA PRINCIPAL DE ANÚNCIOS
@@ -63,12 +64,12 @@ fun AnunciosScreen(
     // --- estados da tela ---
     var posters by remember { mutableStateOf(listOf<Poster>()) }
     val cars by db.carDao().getAllCars().collectAsState(initial = emptyList())
-    var imagesMap by remember { mutableStateOf(mapOf<Int, ByteArray?>()) }
+    var imagesMap by remember { mutableStateOf(mapOf<Long, ByteArray?>()) }
 
     // --- carregamento inicial dos dados do banco ---
     LaunchedEffect(Unit) {
         posters = db.posterDao().list()
-        val map = mutableMapOf<Int, ByteArray?>()
+        val map = mutableMapOf<Long, ByteArray?>()
         posters.forEach { poster ->
             val imgs = db.posterImageDao().getByPosterId(poster.id)
             map[poster.id] = imgs.firstOrNull()?.image
@@ -336,9 +337,9 @@ fun AnunciosScreen(
                     try {
                         if (editingPoster == null) {
                             val newCarIdLong = db.carDao().insertCar(car)
-                            val newCarId = newCarIdLong.toInt()
+                            val newCarId = newCarIdLong
                             val posterToInsert = poster.copy(carId = newCarId.toLong())
-                            val newPosterId = db.posterDao().insert(posterToInsert).toInt()
+                            val newPosterId = db.posterDao().insert(posterToInsert)
                             images.forEach { img ->
                                 db.posterImageDao().insert(
                                     PosterImage(posterId = newPosterId, image = img)
@@ -346,7 +347,7 @@ fun AnunciosScreen(
                             }
                         } else {
                             editingPoster?.let { ep ->
-                                val carToUpdate = car.copy(id = ep.carId.toInt())
+                                val carToUpdate = car.copy(id = ep.carId)
                                 db.carDao().updateCar(carToUpdate)
                                 val posterToUpdate = poster.copy(id = ep.id, carId = ep.carId)
                                 db.posterDao().update(posterToUpdate)
@@ -359,7 +360,7 @@ fun AnunciosScreen(
                             }
                         }
                         posters = db.posterDao().list()
-                        val map = mutableMapOf<Int, ByteArray?>()
+                        val map = mutableMapOf<Long, ByteArray?>()
                         posters.forEach { p ->
                             val imgs = db.posterImageDao().getByPosterId(p.id)
                             map[p.id] = imgs.firstOrNull()?.image

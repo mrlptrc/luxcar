@@ -12,10 +12,14 @@ import com.example.luxcar.R
 import com.example.luxcar.data.model.Car
 import com.example.luxcar.data.model.Poster
 
+/**
+ * Adapter para RecyclerView de Posters
+ * ✅ CORRIGIDO: Trabalha com Long IDs em vez de Int
+ */
 class PosterAdapter(
     private var posters: List<Poster>,
     private val cars: MutableList<Car>,
-    private var images: MutableMap<Int, ByteArray?>,
+    private var images: MutableMap<Long, ByteArray?>, // ✅ Long em vez de Int
     private val onOpen: (Poster) -> Unit,
     private val onEdit: (Poster) -> Unit,
     private val onDelete: (Poster) -> Unit
@@ -41,8 +45,9 @@ class PosterAdapter(
 
     override fun onBindViewHolder(holder: PosterViewHolder, position: Int) {
         val poster = posters[position]
-        val car = cars.find { it.id.toLong() == poster.carId }
-        val context = holder.itemView.context // pega context para tradução
+        // ✅ CORRIGIDO: Não precisa mais converter, ambos são Long
+        val car = cars.find { it.id == poster.carId }
+        val context = holder.itemView.context
 
         holder.title.text = poster.titulo
         holder.subtitle.text = "${car?.marca} ${car?.modelo} (${car?.ano})"
@@ -54,6 +59,7 @@ class PosterAdapter(
         holder.btnEdit.text = context.getString(R.string.edit_ad)
         holder.btnDelete.text = context.getString(R.string.ad_deleted)
 
+        // flag de negociação
         if(poster.emNegociacao) {
             holder.flagNegociacao.visibility = View.VISIBLE
         } else {
@@ -73,7 +79,14 @@ class PosterAdapter(
         holder.btnDelete.setOnClickListener { onDelete(poster) }
     }
 
-    fun updateList(newList: List<Poster>, newImages: Map<Int, ByteArray?>, newCars: List<Car>) {
+    /**
+     * ✅ CORRIGIDO: Parâmetros agora usam Long
+     */
+    fun updateList(
+        newList: List<Poster>,
+        newImages: Map<Long, ByteArray?>,
+        newCars: List<Car>
+    ) {
         this.posters = newList
         this.images.clear()
         this.images.putAll(newImages)

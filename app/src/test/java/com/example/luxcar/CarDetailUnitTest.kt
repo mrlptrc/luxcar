@@ -77,6 +77,6 @@ class CarDetailUnitTest {
     @Test
     fun deveManterIntegridadeDeRelacionamentoEntreAnuncioECarro() {
         assertEquals(poster.carId, car.id)
-        assertTrue("IDs deveriam corresponder", poster.carId.toInt() == car.id)
+        assertTrue("IDs deveriam corresponder", poster.carId == car.id)
     }
 }

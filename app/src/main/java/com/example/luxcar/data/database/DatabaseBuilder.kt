@@ -3,17 +3,27 @@ package com.example.luxcar.data.database
 import android.content.Context
 import androidx.room.Room
 
-class DatabaseBuilder {
+object DatabaseBuilder {
+
+    @Volatile
     private var instance: AppDatabase? = null
 
-    fun GetInstance(context: Context): AppDatabase {
-        if(instance == null){
-            instance = Room.databaseBuilder(
-            context.applicationContext, // passando o contexto do application que o database builder precisa
-            AppDatabase::class.java, // passa as classes model da nossa aplicação pro databaseBuilder
-            "luxcar.db" // nome do arquivo da database
-            ).build() // dps que passa os parametros da build com os parametros
+    fun getInstance(context: Context): AppDatabase {
+        return instance ?: synchronized(this) {
+            instance ?: buildDatabase(context).also { instance = it }
         }
-        return instance!!
+    }
+    private fun buildDatabase(context: Context): AppDatabase {
+        return Room.databaseBuilder(
+            context.applicationContext,
+            AppDatabase::class.java,
+            "luxcar.db"
+        )
+            .fallbackToDestructiveMigration()
+            .build()
+    }
+    fun clearInstance() {
+        instance?.close()
+        instance = null
     }
 }
