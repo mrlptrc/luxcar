@@ -13,16 +13,24 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.luxcar.data.database.AppDatabase
 import com.example.luxcar.data.model.Car
 import com.example.luxcar.data.model.Poster
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.example.luxcar.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,8 +38,9 @@ fun CarDetailScreen(db: AppDatabase, carId: Int, onBack: () -> Unit, logoResId: 
     var car by remember { mutableStateOf<Car?>(null) }
     var poster by remember { mutableStateOf<Poster?>(null) }
     var images by remember { mutableStateOf(listOf<ByteArray>()) }
-    var fontScale by remember { mutableStateOf(1f) } // acessibilidade
+    var fontScale by remember { mutableStateOf(1f) }
     val Orange = Color(0xFFFF9800)
+    val LightGray = Color(0xFFF5F5F5)
 
     LaunchedEffect(carId) {
         val loadedCar = withContext(Dispatchers.IO) { db.carDao().getCarById(carId.toLong()) }
@@ -51,90 +60,60 @@ fun CarDetailScreen(db: AppDatabase, carId: Int, onBack: () -> Unit, logoResId: 
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            "Detalhes do Carro",
-                            style = MaterialTheme.typography.titleLarge.copy(fontSize = MaterialTheme.typography.titleLarge.fontSize * fontScale)
-                        )
-                    }
+                    Text(
+                        stringResource(id = R.string.car_details_title),
+                        fontWeight = FontWeight.SemiBold
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = { onBack() }) {
                         Icon(
                             painter = painterResource(id = android.R.drawable.ic_media_previous),
-                            contentDescription = "Voltar"
+                            contentDescription = stringResource(id = R.string.back)
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White
+                )
             )
-        }
+        },
+        containerColor = Color.White
     ) { paddingValues ->
+
         Column(
             modifier = Modifier
                 .padding(paddingValues)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { fontScale += 0.1f }, colors = ButtonDefaults.buttonColors(containerColor = Orange)) { Text("A+") }
-                Button(onClick = { fontScale = (fontScale - 0.1f).coerceAtLeast(0.8f) }, colors = ButtonDefaults.buttonColors(containerColor = Orange)) { Text("A-") }
-            }
-
+            // --- galeria de imagens ---
             if (images.isNotEmpty()) {
-                LazyRow(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp * fontScale)
+                        .background(LightGray)
                 ) {
-                    items(images) { imgBytes ->
-                        val bmp = BitmapFactory.decodeByteArray(imgBytes, 0, imgBytes.size)
-                        bmp?.let {
-                            Card(
-                                modifier = Modifier
-                                    .width(280.dp * fontScale)
-                                    .height(180.dp * fontScale),
-                                shape = MaterialTheme.shapes.medium,
-                                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
-                            ) {
-                                Image(
-                                    bitmap = it.asImageBitmap(),
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            car?.let { c ->
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("${c.marca} ${c.modelo}", style = MaterialTheme.typography.headlineMedium.copy(fontSize = MaterialTheme.typography.headlineMedium.fontSize * fontScale))
-                    Text("${c.ano} • ${c.cor}", style = MaterialTheme.typography.titleLarge.copy(fontSize = MaterialTheme.typography.titleLarge.fontSize * fontScale), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("${c.kilometragem} km", style = MaterialTheme.typography.titleMedium.copy(fontSize = MaterialTheme.typography.titleMedium.fontSize * fontScale), color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                        Badge(text = c.categoria, color = Color(0xFFFF5722), fontScale = fontScale)
-                        Badge(text = c.combustivel, color = Color(0xFF4CAF50), fontScale = fontScale)
-                    }
-
-                    if (c.acessorios.isNotEmpty()) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("Acessórios:", style = MaterialTheme.typography.titleMedium.copy(fontSize = MaterialTheme.typography.titleMedium.fontSize * fontScale))
-                            FlowRow(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                c.acessorios.forEach { acc ->
-                                    Badge(text = acc, color = Color(0xFF2196F3), fontScale = fontScale)
+                    LazyRow(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.spacedBy(0.dp)
+                    ) {
+                        items(images) { imgBytes ->
+                            val bmp = BitmapFactory.decodeByteArray(imgBytes, 0, imgBytes.size)
+                            bmp?.let {
+                                Box(
+                                    modifier = Modifier
+                                        .fillParentMaxWidth()
+                                        .fillMaxHeight()
+                                ) {
+                                    Image(
+                                        bitmap = it.asImageBitmap(),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
                                 }
                             }
                         }
@@ -142,33 +121,225 @@ fun CarDetailScreen(db: AppDatabase, carId: Int, onBack: () -> Unit, logoResId: 
                 }
             }
 
-            poster?.let { p ->
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(p.descricao, style = MaterialTheme.typography.titleMedium.copy(fontSize = MaterialTheme.typography.titleMedium.fontSize * fontScale))
-                }
-            }
+            // --- conteúdo principal ---
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(32.dp)
+            ) {
 
-            poster?.let { p ->
-                Text(
-                    "R$ ${p.preco}",
-                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale),
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                // --- controle de fonte ---
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedButton(
+                        onClick = { fontScale += 0.1f },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Orange
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            stringResource(id = R.string.font_increase),
+                            fontSize = (14.sp.value * fontScale).sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = { fontScale = (fontScale - 0.1f).coerceAtLeast(0.8f) },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Orange
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            stringResource(id = R.string.font_decrease),
+                            fontSize = (14.sp.value * fontScale).sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                // --- informações principais ---
+                car?.let { c ->
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                    ) {
+                        // título
+                        Text(
+                            "${c.marca} ${c.modelo}",
+                            fontSize = (32.sp.value * fontScale).sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF212121)
+                        )
+
+                        // ano, cor, km
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            InfoRow(
+                                label = stringResource(id = R.string.year),
+                                value = c.ano.toString(),
+                                fontScale = fontScale
+                            )
+                            InfoRow(
+                                label = stringResource(id = R.string.color),
+                                value = c.cor,
+                                fontScale = fontScale
+                            )
+                            InfoRow(
+                                label = stringResource(id = R.string.km),
+                                value = "${c.kilometragem} km",
+                                fontScale = fontScale
+                            )
+                        }
+
+                        // categoria e combustível
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            DetailBadge(
+                                text = c.categoria,
+                                fontScale = fontScale
+                            )
+                            DetailBadge(
+                                text = c.combustivel,
+                                fontScale = fontScale
+                            )
+                        }
+                    }
+                }
+
+                // --- acessórios ---
+                car?.let { c ->
+                    if (c.acessorios.isNotEmpty()) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Text(
+                                stringResource(id = R.string.accessories),
+                                fontSize = (20.sp.value * fontScale).sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF212121)
+                            )
+
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                c.acessorios.forEach { acc ->
+                                    DetailBadge(text = acc, fontScale = fontScale)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // --- descrição ---
+                poster?.let { p ->
+                    if (p.descricao.isNotBlank()) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Text(
+                                stringResource(id = R.string.description),
+                                fontSize = (20.sp.value * fontScale).sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF212121)
+                            )
+
+                            Text(
+                                p.descricao,
+                                fontSize = (16.sp.value * fontScale).sp,
+                                lineHeight = (24.sp.value * fontScale).sp,
+                                color = Color(0xFF616161)
+                            )
+                        }
+                    }
+                }
+
+                // --- preço ---
+                poster?.let { p ->
+                    Divider(
+                        color = Color(0xFFE0E0E0),
+                        thickness = 1.dp,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            stringResource(id = R.string.price_label),
+                            fontSize = (14.sp.value * fontScale).sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF757575),
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            stringResource(id = R.string.price, p.preco),
+                            fontSize = (36.sp.value * fontScale).sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Orange,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
             }
         }
     }
 }
 
+// ==========================================================
+// COMPONENTES
+// ==========================================================
+
 @Composable
-fun Badge(text: String, color: Color, fontScale: Float = 1f) {
-    Box(
-        modifier = Modifier
-            .background(color, RoundedCornerShape(12.dp))
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+fun InfoRow(label: String, value: String, fontScale: Float = 1f) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = text, color = Color.White, style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize * fontScale))
+        Text(
+            label,
+            fontSize = (16.sp.value * fontScale).sp,
+            color = Color(0xFF757575),
+            fontWeight = FontWeight.Normal
+        )
+        Text(
+            value,
+            fontSize = (16.sp.value * fontScale).sp,
+            color = Color(0xFF212121),
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 
+@Composable
+fun DetailBadge(text: String, fontScale: Float = 1f) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFFF5F5F5))
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+    ) {
+        Text(
+            text = text,
+            color = Color(0xFF424242),
+            fontSize = (14.sp.value * fontScale).sp,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}

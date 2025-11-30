@@ -4,8 +4,10 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -14,8 +16,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.luxcar.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,125 +30,207 @@ fun AboutScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val Orange = Color(0xFFFF9800)
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Sobre o LuxCar") },
+                title = {
+                    Text(
+                        stringResource(R.string.about_title),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { onBack() }) {
                         Icon(
                             painter = painterResource(id = android.R.drawable.ic_media_previous),
-                            contentDescription = "Voltar"
+                            contentDescription = stringResource(R.string.back)
                         )
                     }
                 },
-                colors = TopAppBarDefaults.mediumTopAppBarColors(
-                    containerColor = Color(0xFF1A1A1A),
-                    titleContentColor = Color.White
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White
                 )
             )
         },
-        containerColor = Color.White,
-        content = { paddingValues ->
-            Column(
+        containerColor = Color.White
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // logo
+            Image(
+                painter = painterResource(id = logoResId),
+                contentDescription = stringResource(R.string.logo_description),
                 modifier = Modifier
-                    .padding(paddingValues)
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Top
+                    .height(100.dp)
+                    .padding(bottom = 24.dp)
+            )
+
+            // título
+            Text(
+                text = stringResource(R.string.welcome_luxcar),
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF212121),
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // descrição principal
+            Text(
+                text = stringResource(R.string.about_description),
+                fontSize = 16.sp,
+                lineHeight = 24.sp,
+                color = Color(0xFF424242),
+                textAlign = TextAlign.Start
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // benefícios
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Image(
-                    painter = painterResource(id = logoResId),
-                    contentDescription = "Logo LuxCar",
-                    modifier = Modifier
-                        .height(100.dp)
-                        .padding(bottom = 16.dp)
-                )
-
                 Text(
-                    text = "Bem-vindo ao LuxCar",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Color.Black,
-                    textAlign = TextAlign.Center
+                    text = stringResource(R.string.benefits_title),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF212121)
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "O LUXCAR é a ferramenta definitiva para concessionárias e vendedores, " +
-                            "desenhada para transformar a apresentação de veículos de luxo e seminovos premium. " +
-                            "Permitimos que sua equipe ofereça uma experiência de atendimento rápida, moderna e tecnológica, " +
-                            "diretamente no conforto e segurança do showroom.\n\n" +
-
-                            "Com o LUXCAR, você garante:\n\n" +
-                            "• Apresentação Dinâmica: Vendedores podem mostrar o catálogo de veículos de forma mais rápida e tecnológica, " +
-                            "substituindo o antigo anúncio por uma consulta interativa em tablet.\n\n" +
-                            "• Visualização Instantânea: Clientes podem visualizar todos os carros disponíveis com a chegada na concessionária e em tempo real.\n\n" +
-                            "• Consulta Detalhada: Acesso imediato a detalhes, fotos e preços de cada veículo, " +
-                            "com confiabilidade nas informações de venda.\n\n" +
-                            "• Experiência Premium: Oferece uma experiência moderna, segura e eficiente tanto para vendedores quanto para compradores.\n\n" +
-                            "• Nossa Missão: Transformar o mercado automotivo digital, unindo tecnologia, segurança e experiência do usuário.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Black,
-                    textAlign = TextAlign.Start,
-                    modifier = Modifier.padding(horizontal = 8.dp)
+                BenefitItem(
+                    title = stringResource(R.string.benefit_1_title),
+                    description = stringResource(R.string.benefit_1_desc)
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                BenefitItem(
+                    title = stringResource(R.string.benefit_2_title),
+                    description = stringResource(R.string.benefit_2_desc)
+                )
 
-                Button(
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "message/rfc822"
-                            putExtra(Intent.EXTRA_EMAIL, arrayOf("luxcar_support@googlegroups.com"))
-                            putExtra(Intent.EXTRA_SUBJECT, "Suporte Técnico/Comercial - Aplicativo LUXCAR")
-                            putExtra(
-                                Intent.EXTRA_TEXT,
-                                """
-                                Prezada Equipe LUXCAR,
-                                
-                                Detalhe sua solicitação abaixo. Caso seja um problema técnico, por favor, inclua o máximo de informações possível:
-                                
-                                ---------------------------------------------------
-                                Tipo de Solicitação: (Ex: Dúvida, Erro, Sugestão, Contato Comercial)
-                                Nome da Concessionária: 
-                                Nome do Contato: 
-                                Telefone/WhatsApp: 
-                                
-                                Descrição Detalhada:
-                                [Insira aqui a descrição detalhada da sua solicitação]
-                                
-                                ---------------------------------------------------
-                                Agradecemos o seu contato.
-                                """.trimIndent()
-                            )
-                        }
+                BenefitItem(
+                    title = stringResource(R.string.benefit_3_title),
+                    description = stringResource(R.string.benefit_3_desc)
+                )
 
-                        try {
-                            context.startActivity(
-                                Intent.createChooser(intent, "Escolha um aplicativo de e-mail:")
-                            )
-                        } catch (e: ActivityNotFoundException) {
-                            Toast.makeText(
-                                context,
-                                "Nenhum aplicativo de e-mail encontrado.",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1A1A))
+                BenefitItem(
+                    title = stringResource(R.string.benefit_4_title),
+                    description = stringResource(R.string.benefit_4_desc)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // missão
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFFFF3E0)
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp)
                 ) {
                     Text(
-                        text = "Entrar em contato com o Suporte",
-                        color = Color.White
+                        text = stringResource(R.string.mission_title),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Orange
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.mission_description),
+                        fontSize = 15.sp,
+                        lineHeight = 22.sp,
+                        color = Color(0xFF424242)
                     )
                 }
+            }
 
-                Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // botão contato
+            Button(
+                onClick = {
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "message/rfc822"
+                        putExtra(Intent.EXTRA_EMAIL, arrayOf("luxcar_support@googlegroups.com"))
+                        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.email_subject))
+                        putExtra(Intent.EXTRA_TEXT, context.getString(R.string.email_template))
+                    }
+
+                    try {
+                        context.startActivity(
+                            Intent.createChooser(intent, context.getString(R.string.email_chooser))
+                        )
+                    } catch (e: ActivityNotFoundException) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.email_error),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Orange),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.contact_support),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+fun BenefitItem(title: String, description: String) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .padding(top = 8.dp)
+                    .background(
+                        Color(0xFFFF9800),
+                        androidx.compose.foundation.shape.CircleShape
+                    )
+            )
+            Column {
+                Text(
+                    text = title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF212121)
+                )
+                Text(
+                    text = description,
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp,
+                    color = Color(0xFF616161)
+                )
             }
         }
-    )
+    }
 }

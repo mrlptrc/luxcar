@@ -78,6 +78,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("androidx.activity:activity-compose:1.8.2")
 
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.datastore:datastore-preferences-core:1.1.1")
     implementation(platform("androidx.compose:compose-bom:2025.09.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
@@ -87,8 +89,13 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.junit.ktx)
     implementation(libs.androidx.ui.test.junit4)
+    implementation(libs.ui)
+    implementation(libs.androidx.compose.foundation.layout)
+    implementation(libs.androidx.compose.runtime.saveable)
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
+    implementation("androidx.cardview:cardview:1.0.0")
 
     implementation("androidx.room:room-runtime:2.6.1")
     ksp("androidx.room:room-compiler:2.5.2")

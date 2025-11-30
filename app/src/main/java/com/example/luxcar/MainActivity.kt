@@ -1,23 +1,55 @@
 package com.example.luxcar
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.room.Room
+import com.example.luxcar.data.LanguageStore
 import com.example.luxcar.data.database.AppDatabase
-import com.example.luxcar.ui.screens.LoginScreen
-import com.example.luxcar.ui.screens.RegisterScreen
 import com.example.luxcar.ui.screens.*
+import com.example.luxcar.utils.LocaleManager
 import com.example.luxcar.ui.theme.LuxcarTheme
+import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity() {
+
     private lateinit var db: AppDatabase
+    private var savedLanguage: String = "pt"
+    private var currentScreenState: String = "login"
+
+    // --- FUNÇÃO QUE MUDA O IDIOMA ---
+    fun changeLanguage(lang: String) {
+        // salva idioma no DataStore
+        runBlocking {
+            LanguageStore.saveLanguage(this@MainActivity, lang)
+        }
+
+        // aplica o locale
+        LocaleManager.setLocale(this, lang)
+
+        // recria activity mantendo "currentScreen"
+        recreate()
+    }
+
+    override fun attachBaseContext(newBase: Context?) {
+        if (newBase != null) {
+            val lang = runBlocking { LanguageStore.loadLanguage(newBase) }
+            savedLanguage = lang
+
+            val context = LocaleManager.setLocale(newBase, lang)
+            super.attachBaseContext(context)
+        } else {
+            super.attachBaseContext(newBase)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // criação do banco
+        // --- inicializa banco ---
         db = Room.databaseBuilder(
             applicationContext,
             AppDatabase::class.java,
@@ -26,9 +58,13 @@ class MainActivity : ComponentActivity() {
             .fallbackToDestructiveMigration()
             .build()
 
+        // restaura tela atual
+        val initialScreen = savedInstanceState?.getString("currentScreen") ?: "login"
+
         setContent {
             LuxcarTheme {
-                var currentScreen by remember { mutableStateOf("login") }
+                var currentScreen by rememberSaveable { mutableStateOf(initialScreen) }
+                this.currentScreenState = currentScreen
 
                 when (currentScreen) {
                     "login" -> LoginScreen(
@@ -44,7 +80,8 @@ class MainActivity : ComponentActivity() {
                         db = db,
                         onLogout = { currentScreen = "login" },
                         onOpenCar = { carId -> currentScreen = "carDetail/$carId" },
-                        onAbout = { currentScreen = "sobremim" }
+                        onAbout = { currentScreen = "sobremim" },
+                        onLanguageChange = { lang -> changeLanguage(lang) }
                     )
                     "sobremim" -> AboutScreen(
                         logoResId = R.drawable.normalgroup,
@@ -64,5 +101,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString("currentScreen", currentScreenState)
+        super.onSaveInstanceState(outState)
     }
 }

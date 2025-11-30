@@ -1,3 +1,138 @@
 <resources>
     <string name="app_name">Luxcar</string>
+    <string name="language">Idioma</string>
+    <string name="logout">Logout</string>
+    <string name="about_us">Sobre Nós</string>
+    <string name="search_hint">Buscar por modelo ou marca</string>
+    <string name="new_ad">Novo Cadastro</string>
+    <string name="edit_ad">Editar</string>
+    <string name="brand">Marca</string>
+    <string name="model">Modelo</string>
+    <string name="color">Cor</string>
+    <string name="year">Ano</string>
+    <string name="km">Km</string>
+    <string name="title">Título</string>
+    <string name="description">Descrição</string>
+    <string name="price">R$ %.2f</string>
+    <string name="price_label">Preço</string>
+    <string name="category">Categoria</string>
+    <string name="fuel">Combustível</string>
+    <string name="accessories">Acessórios</string>
+    <string name="select_images">Selecionar Imagens</string>
+    <string name="save">Salvar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="ad_deleted">Excluir</string>
+    <string name="error_save">Erro ao salvar: %s</string>
+
+    <!-- Categorias -->
+    <string name="cat_all">Todos</string>
+    <string name="cat_suv">SUV</string>
+    <string name="cat_hatch">Hatch</string>
+    <string name="cat_sedan">Sedan</string>
+    <string name="cat_pickup">Picape</string>
+    <string name="cat_minivan">Minivan</string>
+
+    <!-- Combustíveis -->
+    <string name="fuel_gas">Gasolina</string>
+    <string name="fuel_alcohol">Álcool</string>
+    <string name="fuel_diesel">Diesel</string>
+    <string name="fuel_flex">Flex</string>
+    <string name="fuel_electric">Elétrico</string>
+
+    <!-- Acessórios -->
+    <string name="acc_ac">Ar-condicionado</string>
+    <string name="acc_abs">ABS</string>
+    <string name="acc_airbag">Airbag</string>
+    <string name="acc_camera">Câmera de Ré</string>
+
+    <!-- Placeholders -->
+    <string name="hint_brand">Digite a marca</string>
+    <string name="hint_model">Digite o modelo</string>
+    <string name="hint_color">Digite a cor</string>
+    <string name="hint_year">Digite o ano</string>
+    <string name="hint_km">Digite a quilometragem</string>
+    <string name="hint_title">Digite o título</string>
+    <string name="hint_description">Digite a descrição</string>
+    <string name="hint_price">Digite o preço</string>
+    <string name="hint_category">Selecione uma categoria</string>
+    <string name="hint_fuel">Selecione o combustível</string>
+
+    <!-- LOGIN PAGE -->
+
+    <string name="logo_description">Logotipo</string>
+
+    <string name="font_increase">A+</string>
+    <string name="font_decrease">A-</string>
+
+    <string name="login_title">Login</string>
+    <string name="email">Email</string>
+    <string name="password">Senha</string>
+    <string name="login_button">Entrar</string>
+
+    <string name="forgot_password">Esqueci minha senha</string>
+    <string name="register">Cadastre-se</string>
+
+    <string name="login_error">Email ou senha incorretos</string>
+
+    <!-- LOGIN PAGE -->
+
+    <string name="car_details_title">Detalhes do Carro</string>
+    <string name="back">Voltar</string>
+
+    <string name="price_prefix">R$ %1$s</string>
+
+    <string name="category_label">Categoria</string>
+    <string name="fuel_label">Combustível</string>
+
+    <!-- ================================================ -->
+    <!-- ADICIONE NO res/values/strings.xml (PORTUGUÊS) -->
+    <!-- ================================================ -->
+
+    <!-- login screen -->
+    <string name="login_subtitle">Faça login para continuar</string>
+    <string name="register_link">Não tem conta? Cadastre-se</string>
+
+    <!-- register screen -->
+    <string name="register_title">Criar Conta</string>
+    <string name="register_subtitle">Preencha os dados para se cadastrar</string>
+    <string name="name">Nome</string>
+    <string name="confirm_password">Confirmar Senha</string>
+    <string name="register_button">Cadastrar</string>
+    <string name="back_to_login">Já tem conta? Faça login</string>
+    <string name="password_mismatch">As senhas não coincidem</string>
+    <string name="register_success">Cadastro realizado com sucesso</string>
+    <string name="register_error">Erro ao cadastrar: %s</string>
+
+    <!-- about screen -->
+    <string name="about_title">Sobre o LuxCar</string>
+    <string name="welcome_luxcar">Bem-vindo ao LuxCar</string>
+    <string name="about_description">O LUXCAR é a ferramenta definitiva para concessionárias e vendedores, desenhada para transformar a apresentação de veículos de luxo e seminovos premium.</string>
+    <string name="benefits_title">Nossos Diferenciais</string>
+
+    <string name="benefit_1_title">Apresentação Dinâmica</string>
+    <string name="benefit_1_desc">Vendedores podem mostrar o catálogo de veículos de forma mais rápida e tecnológica, substituindo o antigo anúncio por uma consulta interativa em tablet.</string>
+
+    <string name="benefit_2_title">Visualização Instantânea</string>
+    <string name="benefit_2_desc">Clientes podem visualizar todos os carros disponíveis com a chegada na concessionária e em tempo real.</string>
+
+    <string name="benefit_3_title">Consulta Detalhada</string>
+    <string name="benefit_3_desc">Acesso imediato a detalhes, fotos e preços de cada veículo, com confiabilidade nas informações de venda.</string>
+
+    <string name="benefit_4_title">Experiência Premium</string>
+    <string name="benefit_4_desc">Oferece uma experiência moderna, segura e eficiente tanto para vendedores quanto para compradores.</string>
+
+    <string name="mission_title">Nossa Missão</string>
+    <string name="mission_description">Transformar o mercado automotivo digital, unindo tecnologia, segurança e experiência do usuário.</string>
+
+    <string name="contact_support">Entrar em Contato</string>
+    <string name="email_subject">Suporte Técnico/Comercial - Aplicativo LUXCAR</string>
+    <string name="email_chooser">Escolha um aplicativo de e-mail</string>
+    <string name="email_error">Nenhum aplicativo de e-mail encontrado</string>
+    <string name="email_template">Prezada Equipe LUXCAR,\n\nDetalhe sua solicitação abaixo:\n\nTipo de Solicitação:\nNome da Concessionária:\nNome do Contato:\nTelefone/WhatsApp:\n\nDescrição Detalhada:\n\n---\nAgradecemos o seu contato.</string>
+    <string name="negotiation_status">Em Negociação</string>
+    <string name="negotiation_status_desc">Marcar este anúncio como em negociação avançada</string>
+
+    <string name="forgot_password_message">Entre em contato com o suporte para recuperar sua senha: luxcar_support@googlegroups.com</string>
+    <string name="confirm_delete_title">Confirmar Exclusão</string>
+    <string name="confirm_delete_message">Tem certeza que deseja excluir este anúncio? Esta ação não pode ser desfeita.</string>
 </resources>

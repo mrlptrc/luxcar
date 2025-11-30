@@ -1,0 +1,21 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- Fundo verde -->
+    <path
+        android:fillColor="#009C3B"
+        android:pathData="M0,0h48v48h-48z"/>
+
+    <!-- Losango amarelo -->
+    <path
+        android:fillColor="#FFDF00"
+        android:pathData="M24,6l18,18 -18,18 -18,-18z"/>
+
+    <!-- Círculo azul -->
+    <path
+        android:fillColor="#002776"
+        android:pathData="M24,15a9,9 0 1,0 0,18a9,9 0 1,0 0,-18z"/>
+</vector>

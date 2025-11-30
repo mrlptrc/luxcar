@@ -5,28 +5,35 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.luxcar.data.database.AppDatabase
 import com.example.luxcar.data.model.Car
 import com.example.luxcar.data.model.Poster
@@ -36,29 +43,31 @@ import kotlinx.coroutines.launch
 import com.example.luxcar.R
 import kotlinx.coroutines.withContext
 
-
+// ============================================
+// TELA PRINCIPAL DE ANÚNCIOS
+// ============================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnunciosScreen(
     db: AppDatabase,
     onLogout: () -> Unit,
     onOpenCar: (Long) -> Unit,
-    onAbout: () -> Unit
+    onAbout: () -> Unit,
+    onLanguageChange: (String) -> Unit
 ) {
     val context = LocalContext.current
     var logoResId = R.drawable.normalgroup
-
     val scope = rememberCoroutineScope()
+    val Orange = Color(0xFFFF9800)
 
+    // --- estados da tela ---
     var posters by remember { mutableStateOf(listOf<Poster>()) }
     val cars by db.carDao().getAllCars().collectAsState(initial = emptyList())
-    var imagesMap by remember { mutableStateOf(mapOf<Int, ByteArray?>()) } // posterId -> primeira imagem
-    var currentScreen by remember { mutableStateOf("login") }
-    // buscar do banco quando abrir
+    var imagesMap by remember { mutableStateOf(mapOf<Int, ByteArray?>()) }
+
+    // --- carregamento inicial dos dados do banco ---
     LaunchedEffect(Unit) {
         posters = db.posterDao().list()
-
-        // pegar a primeira imagem de cada poster
         val map = mutableMapOf<Int, ByteArray?>()
         posters.forEach { poster ->
             val imgs = db.posterImageDao().getByPosterId(poster.id)
@@ -67,195 +76,288 @@ fun AnunciosScreen(
         imagesMap = map
     }
 
-    // controle do filtro
+    // --- estados de filtro e busca ---
     var searchQuery by remember { mutableStateOf("") }
+    var selectedCategoria by remember { mutableStateOf<String?>(null) }
 
-    // controle do Dialog
+    // --- estados do dialog de cadastro/edição ---
     var showDialog by remember { mutableStateOf(false) }
     var editingPoster by remember { mutableStateOf<Poster?>(null) }
+    var showLangMenu by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var posterToDelete by remember { mutableStateOf<Poster?>(null) }
 
-    // filtro
-    val filteredPosters = posters.filter { poster ->
-        val car = cars.find { it.id.toLong() == poster.carId }
-        val textToSearch = "${poster.titulo} ${car?.marca} ${car?.modelo}".lowercase()
-        textToSearch.contains(searchQuery.lowercase())
+    // --- lógica de filtro ---
+    val filteredPosters by remember(posters, cars, searchQuery, selectedCategoria) {
+        derivedStateOf {
+            posters.filter { poster ->
+                val car = cars.find { it.id.toLong() == poster.carId } ?: return@filter false
+                val categoriaMatch = selectedCategoria?.let { car.categoria == it } ?: true
+                val textToSearch = "${poster.titulo} ${car.marca} ${car.modelo}".lowercase()
+                val searchMatch = textToSearch.contains(searchQuery.lowercase())
+                categoriaMatch && searchMatch
+            }
+        }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Spacer(modifier = Modifier.weight(1f))
-
                         Image(
                             painter = painterResource(id = logoResId),
-                            contentDescription = "Logo",
-                            modifier = Modifier
-                                .height(40.dp)
+                            contentDescription = stringResource(R.string.logo_description),
+                            modifier = Modifier.height(36.dp)
                         )
-
-                        Spacer(modifier = Modifier.weight(1f))
                     }
                 },
                 actions = {
-                    TextButton(onClick = { onLogout() }) {
-                        Text("Logout", color = Color.Black)
+                    // menu idioma
+                    IconButton(onClick = { showLangMenu = true }) {
+                        Icon(
+                            painter = painterResource(id = android.R.drawable.ic_menu_preferences),
+                            contentDescription = stringResource(R.string.language),
+                            tint = Color(0xFF424242)
+                        )
                     }
 
-                    TextButton(onClick = { onAbout() }) {
-                        Text("Sobre Nós", color = Color.Black)
+                    DropdownMenu(
+                        expanded = showLangMenu,
+                        onDismissRequest = { showLangMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text("🇺🇸", fontSize = 20.sp)
+                                    Text("English", fontSize = 15.sp)
+                                }
+                            },
+                            onClick = {
+                                showLangMenu = false
+                                onLanguageChange("en")
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text("🇪🇸", fontSize = 20.sp)
+                                    Text("Español", fontSize = 15.sp)
+                                }
+                            },
+                            onClick = {
+                                showLangMenu = false
+                                onLanguageChange("es")
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text("🇧🇷", fontSize = 20.sp)
+                                    Text("Português", fontSize = 15.sp)
+                                }
+                            },
+                            onClick = {
+                                showLangMenu = false
+                                onLanguageChange("pt")
+                            }
+                        )
                     }
-                }
+
+                    // sobre
+                    TextButton(onClick = onAbout) {
+                        Text(
+                            stringResource(R.string.about_us),
+                            color = Color(0xFF424242),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    // logout
+                    TextButton(onClick = onLogout) {
+                        Text(
+                            stringResource(R.string.logout),
+                            color = Orange,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White
+                )
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                editingPoster = null
-                showDialog = true
-            }, containerColor = Color(0xFFFF9800)) {
+            FloatingActionButton(
+                onClick = {
+                    editingPoster = null
+                    showDialog = true
+                },
+                containerColor = Orange,
+                shape = RoundedCornerShape(16.dp)
+            ) {
                 Icon(
                     painter = painterResource(id = android.R.drawable.ic_input_add),
-                    contentDescription = "Adicionar"
+                    contentDescription = stringResource(R.string.new_ad),
+                    tint = Color.White
                 )
             }
-        }
+        },
+        containerColor = Color(0xFFFAFAFA)
     ) { paddingValues ->
         Column(
             Modifier
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
+            // --- campo de busca ---
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text("Buscar por modelo ou marca") },
-                modifier = Modifier.fillMaxWidth()
+                label = {
+                    Text(
+                        stringResource(R.string.search_hint),
+                        fontSize = 14.sp
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Orange,
+                    focusedLabelColor = Orange
+                ),
+                leadingIcon = {
+                    Icon(
+                        painter = painterResource(id = android.R.drawable.ic_menu_search),
+                        contentDescription = null,
+                        tint = Color(0xFF757575)
+                    )
+                }
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
 
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            // --- filtro por categoria ---
+            val categoriasKeys = listOf(null, "cat_suv", "cat_hatch", "cat_sedan", "cat_pickup", "cat_minivan")
+            val categoriasLabels = listOf(
+                stringResource(R.string.cat_all),
+                stringResource(R.string.cat_suv),
+                stringResource(R.string.cat_hatch),
+                stringResource(R.string.cat_sedan),
+                stringResource(R.string.cat_pickup),
+                stringResource(R.string.cat_minivan)
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(filteredPosters) { poster ->
-                    val car = cars.find { it.id.toLong() == poster.carId }
-                    val cover = imagesMap[poster.id]
-
-                    Card(
+                categoriasKeys.forEachIndexed { index, key ->
+                    val isSelected = selectedCategoria == key
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(250.dp)
-                            .clickable { onOpenCar(poster.carId) },
-                        elevation = CardDefaults.cardElevation(4.dp)
-                    ) {
-                        Column(Modifier.padding(12.dp)) {
-                            cover?.let { imgBytes ->
-                                val bitmap = BitmapFactory.decodeByteArray(imgBytes, 0, imgBytes.size)
-                                bitmap?.let {
-                                    Image(
-                                        bitmap = it.asImageBitmap(),
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(120.dp)
-                                    )
-                                }
-                            }
-
-                            Text(
-                                poster.titulo,
-                                style = MaterialTheme.typography.titleMedium,
-                                maxLines = 1
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(
+                                if (isSelected) Orange else Color(0xFFF5F5F5)
                             )
-                            car?.let {
-                                Text(
-                                    "${it.marca} ${it.modelo} (${it.ano})",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                            Text("R$ ${poster.preco}", style = MaterialTheme.typography.bodyLarge)
-
-                            Spacer(Modifier.height(8.dp))
-
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                TextButton(onClick = {
-                                    editingPoster = poster
-                                    showDialog = true
-                                }) { Text("Editar") }
-
-                                TextButton(onClick = {
-                                    scope.launch {
-                                        db.posterDao().delete(poster)
-                                        car?.let { db.carDao().deleteCar(it) }
-                                        posters = db.posterDao().list()
-                                        imagesMap = imagesMap - poster.id
-                                        Toast.makeText(context, "Anúncio excluído", Toast.LENGTH_SHORT).show()
-                                    }
-                                }) { Text("Excluir") }
-                            }
-                        }
+                            .clickable { selectedCategoria = key }
+                            .padding(horizontal = 20.dp, vertical = 12.dp)
+                    ) {
+                        Text(
+                            text = categoriasLabels[index],
+                            color = if (isSelected) Color.White else Color(0xFF424242),
+                            fontSize = 14.sp,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
+                        )
                     }
                 }
             }
+
+            Spacer(Modifier.height(20.dp))
+
+            // --- recyclerview com grid de anúncios ---
+            AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { context ->
+                    RecyclerView(context).apply {
+                        layoutManager = GridLayoutManager(context, 2)
+                        adapter = PosterAdapter(
+                            posters = filteredPosters,
+                            cars = cars.toMutableList(),
+                            images = imagesMap.toMutableMap(),
+                            onOpen = { poster -> onOpenCar(poster.carId) },
+                            onEdit = { poster ->
+                                editingPoster = poster
+                                showDialog = true
+                            },
+                            onDelete = { poster ->
+                                posterToDelete = poster
+                                showDeleteDialog = true
+                            }
+                        )
+                    }
+                },
+                update = { recyclerView ->
+                    val adapter = recyclerView.adapter as PosterAdapter
+                    adapter.updateList(
+                        newList = filteredPosters,
+                        newImages = imagesMap,
+                        newCars = cars,
+                    )
+                }
+            )
         }
     }
 
+    // --- dialog de cadastro/edição ---
     if (showDialog) {
         CustomCarDialog(
             db = db,
             posterToEdit = editingPoster,
             onDismiss = { showDialog = false },
             onSave = { car, poster, images ->
-                val ctx = context
                 scope.launch {
                     try {
                         if (editingPoster == null) {
                             val newCarIdLong = db.carDao().insertCar(car)
                             val newCarId = newCarIdLong.toInt()
-
                             val posterToInsert = poster.copy(carId = newCarId.toLong())
                             val newPosterId = db.posterDao().insert(posterToInsert).toInt()
-
                             images.forEach { img ->
                                 db.posterImageDao().insert(
-                                    PosterImage(
-                                        posterId = newPosterId,
-                                        image = img
-                                    )
+                                    PosterImage(posterId = newPosterId, image = img)
                                 )
                             }
                         } else {
-                            val ep = editingPoster
-                            if (ep != null) {
+                            editingPoster?.let { ep ->
                                 val carToUpdate = car.copy(id = ep.carId.toInt())
                                 db.carDao().updateCar(carToUpdate)
-
                                 val posterToUpdate = poster.copy(id = ep.id, carId = ep.carId)
                                 db.posterDao().update(posterToUpdate)
-
                                 db.posterImageDao().deleteByPosterId(ep.id)
                                 images.forEach { img ->
                                     db.posterImageDao().insert(
-                                        PosterImage(
-                                            posterId = ep.id,
-                                            image = img
-                                        )
+                                        PosterImage(posterId = ep.id, image = img)
                                     )
                                 }
                             }
                         }
-
                         posters = db.posterDao().list()
                         val map = mutableMapOf<Int, ByteArray?>()
                         posters.forEach { p ->
@@ -263,18 +365,79 @@ fun AnunciosScreen(
                             map[p.id] = imgs.firstOrNull()?.image
                         }
                         imagesMap = map
-
                         showDialog = false
                         editingPoster = null
                     } catch (e: Exception) {
-                        Toast.makeText(ctx, "Erro ao salvar: ${e.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.error_save, e.message),
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
             }
         )
     }
+
+    // --- dialog de confirmação de exclusão ---
+    if (showDeleteDialog && posterToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = {
+                Text(
+                    stringResource(R.string.confirm_delete_title),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(stringResource(R.string.confirm_delete_message))
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            posterToDelete?.let { poster ->
+                                val car = cars.find { it.id.toLong() == poster.carId }
+                                db.posterDao().delete(poster)
+                                car?.let { db.carDao().deleteCar(it) }
+                                posters = db.posterDao().list()
+                                imagesMap = imagesMap - poster.id
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.ad_deleted),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                        showDeleteDialog = false
+                        posterToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFD32F2F)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(stringResource(R.string.ad_deleted))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        posterToDelete = null
+                    }
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+            shape = RoundedCornerShape(20.dp)
+        )
+    }
 }
 
+// ============================================
+// DIALOG DE CADASTRO/EDIÇÃO DE CARRO
+// ============================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomCarDialog(
@@ -285,7 +448,9 @@ fun CustomCarDialog(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val Orange = Color(0xFFFF9800)
 
+    // --- estados dos campos ---
     var marca by remember { mutableStateOf("") }
     var modelo by remember { mutableStateOf("") }
     var cor by remember { mutableStateOf("") }
@@ -294,16 +459,37 @@ fun CustomCarDialog(
     var titulo by remember { mutableStateOf("") }
     var descricao by remember { mutableStateOf("") }
     var preco by remember { mutableStateOf("") }
-    var combustivel by remember { mutableStateOf("Gasolina") }
-    var categoria by remember { mutableStateOf("SUV") }
+    var combustivel by remember { mutableStateOf("fuel_gas") }
+    var categoria by remember { mutableStateOf("cat_suv") }
+    var emNegociacao by remember { mutableStateOf(false) }
     val acessoriosSelecionados = remember { mutableStateListOf<String>() }
     var selectedImages by remember { mutableStateOf(listOf<ByteArray>()) }
-    val Orange = Color(0xFFFF9800)
 
-    val tiposCombustivel = listOf("Gasolina", "Álcool", "Diesel", "Flex", "Elétrico")
-    val tiposCategoria = listOf("Sedan", "Hatch", "SUV", "Picape", "Minivan")
-    val acessorios = listOf("Ar-condicionado", "ABS", "Airbag", "Câmera de Ré")
+    // --- mapas de tradução ---
+    val tiposCombustivelMap = mapOf(
+        "fuel_gas" to stringResource(R.string.fuel_gas),
+        "fuel_alcohol" to stringResource(R.string.fuel_alcohol),
+        "fuel_diesel" to stringResource(R.string.fuel_diesel),
+        "fuel_flex" to stringResource(R.string.fuel_flex),
+        "fuel_electric" to stringResource(R.string.fuel_electric)
+    )
 
+    val tiposCategoriaMap = mapOf(
+        "cat_sedan" to stringResource(R.string.cat_sedan),
+        "cat_hatch" to stringResource(R.string.cat_hatch),
+        "cat_suv" to stringResource(R.string.cat_suv),
+        "cat_pickup" to stringResource(R.string.cat_pickup),
+        "cat_minivan" to stringResource(R.string.cat_minivan)
+    )
+
+    val acessoriosMap = mapOf(
+        "acc_ac" to stringResource(R.string.acc_ac),
+        "acc_abs" to stringResource(R.string.acc_abs),
+        "acc_airbag" to stringResource(R.string.acc_airbag),
+        "acc_camera" to stringResource(R.string.acc_camera)
+    )
+
+    // --- carregar dados se estiver editando ---
     LaunchedEffect(posterToEdit) {
         posterToEdit?.let { poster ->
             val car = db.carDao().getCarById(poster.carId)
@@ -321,12 +507,13 @@ fun CustomCarDialog(
             titulo = poster.titulo
             descricao = poster.descricao
             preco = poster.preco.toString()
-
+            emNegociacao = poster.emNegociacao
             val imgs: List<PosterImage> = db.posterImageDao().getByPosterId(poster.id)
             selectedImages = imgs.map { it.image }
         }
     }
 
+    // --- launcher para seleção de imagens ---
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris ->
@@ -345,79 +532,117 @@ fun CustomCarDialog(
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             dismissOnBackPress = true,
-            dismissOnClickOutside = false,
+            dismissOnClickOutside = false
         )
     ) {
         Surface(
-            shape = MaterialTheme.shapes.medium,
-            color = Color(0xFF1A1A1A),
+            shape = RoundedCornerShape(20.dp),
+            color = Color.White,
             modifier = Modifier
                 .fillMaxWidth()
-                .wrapContentHeight()
-                .padding(16.dp)
+                .padding(20.dp)
         ) {
             Column(
                 modifier = Modifier
-                    .padding(16.dp)
+                    .padding(24.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = if (posterToEdit == null) "Novo Cadastro" else "Editar Cadastro",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White
-                )
+                // --- header do dialog ---
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (posterToEdit == null)
+                            stringResource(R.string.new_ad)
+                        else
+                            stringResource(R.string.edit_ad),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF212121)
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            painter = painterResource(id = android.R.drawable.ic_menu_close_clear_cancel),
+                            contentDescription = stringResource(R.string.cancel),
+                            tint = Color(0xFF757575)
+                        )
+                    }
+                }
 
+                Divider(color = Color(0xFFE0E0E0))
+
+                // --- campos de texto ---
                 @Composable
-                fun outlinedTextField(
+                fun DialogTextField(
                     value: String,
                     onValueChange: (String) -> Unit,
-                    labelText: String,
-                    placeholderText: String,
+                    labelResId: Int,
+                    placeholderResId: Int,
                     keyboardType: KeyboardType = KeyboardType.Text
                 ) {
                     OutlinedTextField(
                         value = value,
                         onValueChange = onValueChange,
-                        label = { Text(labelText, color = Color.White) },
-                        placeholder = { Text(placeholderText, color = Color.LightGray) },
+                        label = { Text(stringResource(labelResId), fontSize = 14.sp) },
+                        placeholder = { Text(stringResource(placeholderResId), fontSize = 14.sp) },
                         modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = keyboardType)
+                        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Orange,
+                            focusedLabelColor = Orange
+                        )
                     )
-            }
+                }
 
-                outlinedTextField(marca, { marca = it }, "Marca", "Digite a marca")
-                outlinedTextField(modelo, { modelo = it }, "Modelo", "Digite o modelo")
-                outlinedTextField(cor, { cor = it }, "Cor", "Digite a cor")
-                outlinedTextField(ano, { ano = it }, "Ano", "Digite o ano", KeyboardType.Number)
-                outlinedTextField(kilometragem, { kilometragem = it }, "Km", "Digite a quilometragem", KeyboardType.Number)
-                outlinedTextField(titulo, { titulo = it }, "Título", "Digite o título")
-                outlinedTextField(descricao, { descricao = it }, "Descrição", "Digite a descrição")
-                outlinedTextField(preco, { preco = it }, "Preço", "Digite o preço", KeyboardType.Number)
+                DialogTextField(marca, { marca = it }, R.string.brand, R.string.hint_brand)
+                DialogTextField(modelo, { modelo = it }, R.string.model, R.string.hint_model)
 
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(Modifier.weight(1f)) {
+                        DialogTextField(cor, { cor = it }, R.string.color, R.string.hint_color)
+                    }
+                    Box(Modifier.weight(1f)) {
+                        DialogTextField(ano, { ano = it }, R.string.year, R.string.hint_year, KeyboardType.Number)
+                    }
+                }
+
+                DialogTextField(kilometragem, { kilometragem = it }, R.string.km, R.string.hint_km, KeyboardType.Number)
+                DialogTextField(titulo, { titulo = it }, R.string.title, R.string.hint_title)
+                DialogTextField(descricao, { descricao = it }, R.string.description, R.string.hint_description)
+                DialogTextField(preco, { preco = it }, R.string.price_label, R.string.hint_price, KeyboardType.Number)
+
+                // --- dropdowns ---
                 var expandedCategoria by remember { mutableStateOf(false) }
                 ExposedDropdownMenuBox(
                     expanded = expandedCategoria,
                     onExpandedChange = { expandedCategoria = !expandedCategoria }
                 ) {
                     OutlinedTextField(
-                        value = categoria,
+                        value = tiposCategoriaMap[categoria] ?: "",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Categoria", color = Color.White) },
-                        placeholder = { Text("Selecione uma categoria", color = Color.LightGray) },
+                        label = { Text(stringResource(R.string.category), fontSize = 14.sp) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategoria) },
                         modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Orange,
+                            focusedLabelColor = Orange
+                        )
                     )
                     ExposedDropdownMenu(
                         expanded = expandedCategoria,
                         onDismissRequest = { expandedCategoria = false }
                     ) {
-                        tiposCategoria.forEach { tipo ->
+                        tiposCategoriaMap.forEach { (key, label) ->
                             DropdownMenuItem(
-                                text = { Text(tipo) },
+                                text = { Text(label) },
                                 onClick = {
-                                    categoria = tipo
+                                    categoria = key
                                     expandedCategoria = false
                                 }
                             )
@@ -431,23 +656,27 @@ fun CustomCarDialog(
                     onExpandedChange = { expandedCombustivel = !expandedCombustivel }
                 ) {
                     OutlinedTextField(
-                        value = combustivel,
+                        value = tiposCombustivelMap[combustivel] ?: "",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Combustível", color = Color.White) },
-                        placeholder = { Text("Selecione o combustível", color = Color.LightGray) },
+                        label = { Text(stringResource(R.string.fuel), fontSize = 14.sp) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCombustivel) },
                         modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Orange,
+                            focusedLabelColor = Orange
+                        )
                     )
                     ExposedDropdownMenu(
                         expanded = expandedCombustivel,
                         onDismissRequest = { expandedCombustivel = false }
                     ) {
-                        tiposCombustivel.forEach { tipo ->
+                        tiposCombustivelMap.forEach { (key, label) ->
                             DropdownMenuItem(
-                                text = { Text(tipo) },
+                                text = { Text(label) },
                                 onClick = {
-                                    combustivel = tipo
+                                    combustivel = key
                                     expandedCombustivel = false
                                 }
                             )
@@ -455,57 +684,150 @@ fun CustomCarDialog(
                     }
                 }
 
-                Text("Acessórios", color = Color.White)
-                acessorios.forEach { item ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                if (acessoriosSelecionados.contains(item)) acessoriosSelecionados.remove(item)
-                                else acessoriosSelecionados.add(item)
-                            },
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(item, color = Color.White)
-                        Checkbox(
-                            checked = acessoriosSelecionados.contains(item),
-                            onCheckedChange = {
-                                if (it) acessoriosSelecionados.add(item)
-                                else acessoriosSelecionados.remove(item)
-                            }
-                        )
+                // --- acessórios ---
+                Text(
+                    stringResource(R.string.accessories),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF212121)
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    acessoriosMap.forEach { (key, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    if (acessoriosSelecionados.contains(key))
+                                        acessoriosSelecionados.remove(key)
+                                    else
+                                        acessoriosSelecionados.add(key)
+                                }
+                                .padding(8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(label, fontSize = 15.sp)
+                            Checkbox(
+                                checked = acessoriosSelecionados.contains(key),
+                                onCheckedChange = null,
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = Orange
+                                )
+                            )
+                        }
                     }
                 }
 
-                Button(
-                    colors = ButtonDefaults.buttonColors(Orange),
-                    onClick = { launcher.launch("image/*") },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Selecionar Imagens") }
+                Divider(color = Color(0xFFE0E0E0))
 
-                if (selectedImages.isNotEmpty()) {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(selectedImages) { imgBytes ->
-                            val bmp = BitmapFactory.decodeByteArray(imgBytes, 0, imgBytes.size)
-                            bmp?.let {
-                                Image(
-                                    bitmap = it.asImageBitmap(),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(100.dp)
-                                )
-                            }
+                // --- status de negociação ---
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFFFF3E0)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { emNegociacao = !emNegociacao }
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                stringResource(R.string.negotiation_status),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF212121)
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                stringResource(R.string.negotiation_status_desc),
+                                fontSize = 13.sp,
+                                color = Color(0xFF757575)
+                            )
                         }
+                        Switch(
+                            checked = emNegociacao,
+                            onCheckedChange = { emNegociacao = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = Color(0xFFD32F2F),
+                                uncheckedThumbColor = Color.White,
+                                uncheckedTrackColor = Color(0xFFBDBDBD)
+                            )
+                        )
                     }
                 }
 
                 Spacer(Modifier.height(8.dp))
 
+                // --- seleção de imagens ---
+                OutlinedButton(
+                    onClick = { launcher.launch("image/*") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Orange
+                    )
+                ) {
+                    Icon(
+                        painter = painterResource(id = android.R.drawable.ic_menu_gallery),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.select_images))
+                }
+
+                // --- preview das imagens ---
+                if (selectedImages.isNotEmpty()) {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(selectedImages) { imgBytes ->
+                            val bmp = BitmapFactory.decodeByteArray(imgBytes, 0, imgBytes.size)
+                            bmp?.let {
+                                Card(
+                                    modifier = Modifier.size(100.dp),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Image(
+                                        bitmap = it.asImageBitmap(),
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Divider(color = Color(0xFFE0E0E0))
+
+                // --- botões de ação ---
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f).height(56.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            stringResource(R.string.cancel),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
                     Button(
-                        colors = ButtonDefaults.buttonColors(Orange),
                         onClick = {
                             val car = Car(
                                 marca = marca,
@@ -522,26 +844,22 @@ fun CustomCarDialog(
                                 descricao = descricao,
                                 preco = preco.toDoubleOrNull() ?: 0.0,
                                 imagem = selectedImages.firstOrNull() ?: byteArrayOf(),
-                                carId = posterToEdit?.carId ?: 0
+                                carId = posterToEdit?.carId ?: 0,
+                                emNegociacao = emNegociacao
                             )
                             onSave(car, poster, selectedImages)
                         },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("Salvar") }
-
-                    TextButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f)
-                    ) { Text("Cancelar", color = Color.Red) }
+                        modifier = Modifier.weight(1f).height(56.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Orange),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            stringResource(R.string.save),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }
     }
 }
-
-
-
-
-
-
-

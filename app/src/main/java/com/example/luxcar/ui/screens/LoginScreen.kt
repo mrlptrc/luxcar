@@ -2,58 +2,29 @@ package com.example.luxcar.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.room.Room
-import androidx.test.core.app.ApplicationProvider
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.luxcar.R
 import com.example.luxcar.data.database.AppDatabase
-import com.example.luxcar.data.model.User
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
 
 @Composable
 fun LoginScreen(
@@ -65,148 +36,172 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var senha by remember { mutableStateOf("") }
     var fontScale by remember { mutableStateOf(1f) }
+    val Orange = Color(0xFFFF9800)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
 
+        // logo
         Image(
             painter = painterResource(id = R.drawable.normalgroup),
-            contentDescription = "Logotipo",
+            contentDescription = stringResource(id = R.string.logo_description),
             modifier = Modifier
-                .size(120.dp)
-                .padding(bottom = 24.dp)
+                .size(140.dp)
+                .padding(bottom = 32.dp)
         )
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Button(onClick = { fontScale += 0.1f }) { Text("A+") }
-            Button(onClick = { fontScale = (fontScale - 0.1f).coerceAtLeast(0.8f) }) { Text("A-") }
-        }
+        // título
+        Text(
+            stringResource(R.string.login_title),
+            fontSize = (28.sp.value * fontScale).sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF212121)
+        )
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(8.dp))
 
         Text(
-            "Login",
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontSize = MaterialTheme.typography.headlineMedium.fontSize * fontScale
+            stringResource(R.string.login_subtitle),
+            fontSize = (14.sp.value * fontScale).sp,
+            color = Color(0xFF757575),
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(Modifier.height(40.dp))
+
+        // campos
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = {
+                Text(
+                    stringResource(R.string.email),
+                    fontSize = (14.sp.value * fontScale).sp
+                )
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Orange,
+                focusedLabelColor = Orange
             )
         )
 
         Spacer(Modifier.height(16.dp))
 
-        TextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email", fontSize = 16.sp * fontScale) },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        TextField(
+        OutlinedTextField(
             value = senha,
             onValueChange = { senha = it },
-            label = { Text("Senha", fontSize = 16.sp * fontScale) },
+            label = {
+                Text(
+                    stringResource(R.string.password),
+                    fontSize = (14.sp.value * fontScale).sp
+                )
+            },
             visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Orange,
+                focusedLabelColor = Orange
+            )
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(24.dp))
 
+        // botão login
         Button(
             onClick = {
                 CoroutineScope(Dispatchers.IO).launch {
                     val user = db.userDao().login(email, senha)
                     withContext(Dispatchers.Main) {
                         if (user != null) navToMain()
-                        else Toast.makeText(context, "Email ou senha incorretos", Toast.LENGTH_SHORT).show()
+                        else Toast.makeText(
+                            context,
+                            context.getString(R.string.login_error),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Orange),
+            shape = RoundedCornerShape(12.dp)
         ) {
-            Text("Entrar", fontSize = 16.sp * fontScale, color = Color.White)
+            Text(
+                stringResource(R.string.login_button),
+                fontSize = (16.sp.value * fontScale).sp,
+                fontWeight = FontWeight.SemiBold
+            )
         }
 
         Spacer(Modifier.height(8.dp))
 
-        TextButton(onClick = navToRegister) {
-            Text("Esqueci minha senha", fontSize = 14.sp * fontScale)
-        }
-
-        TextButton(onClick = navToRegister) {
-            Text("Cadastre-se", fontSize = 14.sp * fontScale)
+        // esqueci a senha
+        TextButton(onClick = {
+            Toast.makeText(
+                context,
+                context.getString(R.string.forgot_password_message),
+                Toast.LENGTH_LONG
+            ).show()
+        }) {
+            Text(
+                stringResource(R.string.forgot_password),
+                fontSize = (13.sp.value * fontScale).sp,
+                color = Color(0xFF757575)
+            )
         }
 
         Spacer(Modifier.height(8.dp))
-        }
-}
 
-@RunWith(AndroidJUnit4::class)
-class LoginScreenTest {
-
-    @get:Rule
-    val composeTestRule = createComposeRule()
-
-    private lateinit var db: AppDatabase
-
-    @Before
-    fun setup() {
-        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
-            .allowMainThreadQueries()
-            .build()
-
-        // Cria usuário de teste no banco
-        runBlocking {
-            db.userDao().insert(User(nome = "Murilo", email = "teste@luxcar.com", senha = "1234"))
-        }
-    }
-
-    @Test
-    fun loginComCredenciaisCorretas_deveNavegarParaAnuncios() {
-        composeTestRule.setContent {
-            LoginScreen(
-                navToRegister = {},
-                navToMain = { /* sucesso: simula navegação */ },
-                db = db
+        // link cadastro
+        TextButton(onClick = navToRegister) {
+            Text(
+                stringResource(R.string.register_link),
+                fontSize = (14.sp.value * fontScale).sp,
+                color = Orange
             )
         }
 
-        composeTestRule.onNodeWithText("Email").performTextInput("teste@luxcar.com")
-        composeTestRule.onNodeWithText("Senha").performTextInput("1234")
-        composeTestRule.onNodeWithText("Entrar").performClick()
+        Spacer(Modifier.height(32.dp))
 
-        // Aqui, em um cenário real, você verificaria o estado de navegação.
-        // Como exemplo:
-        composeTestRule.onNodeWithText("Entrar").assertExists() // tela ainda existe = teste básico passou
-    }
+        // controles de fonte
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = { fontScale += 0.1f },
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = Orange
+                )
+            ) {
+                Text(
+                    stringResource(R.string.font_increase),
+                    fontSize = (14.sp.value * fontScale).sp
+                )
+            }
 
-    @Test
-    fun loginComSenhaErrada_exibeMensagemErro() {
-        composeTestRule.setContent {
-            LoginScreen(
-                navToRegister = {},
-                navToMain = {},
-                db = db
-            )
+            OutlinedButton(
+                onClick = { fontScale = (fontScale - 0.1f).coerceAtLeast(0.8f) },
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = Orange
+                )
+            ) {
+                Text(
+                    stringResource(R.string.font_decrease),
+                    fontSize = (14.sp.value * fontScale).sp
+                )
+            }
         }
-
-        composeTestRule.onNodeWithText("Email").performTextInput("teste@luxcar.com")
-        composeTestRule.onNodeWithText("Senha").performTextInput("errado")
-        composeTestRule.onNodeWithText("Entrar").performClick()
-
-        // Esse teste pode ser aprimorado para checar Toast usando Espresso
-        // mas como simplificação:
-        composeTestRule.onNodeWithText("Entrar").assertExists()
     }
 }
