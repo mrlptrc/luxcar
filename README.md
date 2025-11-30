@@ -1736,28 +1736,6 @@ data class User(
 
 ---
 
-## 🔍 Troubleshooting
-
-### Problemas Comuns
-
-#### "Cannot find symbol: PasswordHasher"
-**Causa:** Classe não encontrada  
-**Solução:** Rebuild Project
-
-#### "FOREIGN KEY constraint failed"
-**Causa:** Tentando inserir poster com carId inexistente  
-**Solução:** Verificar que o carro existe antes
-
-#### "Unique constraint violated"
-**Causa:** Email duplicado  
-**Solução:** Validar email antes de inserir
-
-#### "Type mismatch: required Long, found Int"
-**Causa:** Versão antiga do código  
-**Solução:** Atualizar todos os IDs para Long
-
----
-
 ## 📚 Recursos Adicionais
 
 ### Documentação Oficial
@@ -1775,8 +1753,3 @@ data class User(
 - **Android Studio:** Hedgehog 2023.1.1+
 
 ---
-
-**Fim da Documentação Técnica**  
-**Versão:** 1.0  
-**Data:** Novembro 2024  
-**Projeto:** LuxCar - Marketplace de Veículos de Luxo
