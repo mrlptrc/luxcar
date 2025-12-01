@@ -9,6 +9,7 @@ buildscript {
         classpath("com.google.devtools.ksp:com.google.devtools.ksp.gradle.plugin:1.9.10-1.0.13")
     }
 }
+val compileSdkVersion by extra(33)
 
 allprojects {
     repositories {

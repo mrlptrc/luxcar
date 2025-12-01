@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -84,7 +86,9 @@ fun LoginScreen(
             value = state.email,
             onValueChange = viewModel::onEmailChange,
             label = { Text(stringResource(R.string.email)) },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { testTag = "email_input" }, // <- testTag adicionado
             shape = RoundedCornerShape(12.dp),
             enabled = !state.isLoading,
             colors = OutlinedTextFieldDefaults.colors(
@@ -99,7 +103,9 @@ fun LoginScreen(
             value = state.senha,
             onValueChange = viewModel::onSenhaChange,
             label = { Text(stringResource(R.string.password)) },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { testTag = "password_input" }, // <- testTag adicionado
             visualTransformation = PasswordVisualTransformation(),
             shape = RoundedCornerShape(12.dp),
             enabled = !state.isLoading,
@@ -115,7 +121,8 @@ fun LoginScreen(
             onClick = { viewModel.login() },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
+                .height(56.dp)
+                .semantics { testTag = "login_button" }, // <- testTag adicionado
             enabled = !state.isLoading,
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Orange)
@@ -144,7 +151,8 @@ fun LoginScreen(
                     Toast.LENGTH_LONG
                 ).show()
             },
-            enabled = !state.isLoading
+            enabled = !state.isLoading,
+            modifier = Modifier.semantics { testTag = "forgot_password_button" } // <- testTag adicionado
         ) {
             Text(
                 forgotPasswordText,
@@ -157,7 +165,8 @@ fun LoginScreen(
 
         TextButton(
             onClick = navToRegister,
-            enabled = !state.isLoading
+            enabled = !state.isLoading,
+            modifier = Modifier.semantics { testTag = "register_button" } // <- testTag adicionado
         ) {
             Text(
                 stringResource(R.string.register),
@@ -174,7 +183,8 @@ fun LoginScreen(
                 onClick = { viewModel.increaseFont() },
                 shape = RoundedCornerShape(8.dp),
                 enabled = !state.isLoading,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Orange)
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Orange),
+                modifier = Modifier.semantics { testTag = "increase_font_button" } // <- testTag adicionado
             ) {
                 Text(
                     stringResource(R.string.font_increase),
@@ -186,7 +196,8 @@ fun LoginScreen(
                 onClick = { viewModel.decreaseFont() },
                 shape = RoundedCornerShape(8.dp),
                 enabled = !state.isLoading,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Orange)
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Orange),
+                modifier = Modifier.semantics { testTag = "decrease_font_button" } // <- testTag adicionado
             ) {
                 Text(
                     stringResource(R.string.font_decrease),
@@ -196,4 +207,3 @@ fun LoginScreen(
         }
     }
 }
-

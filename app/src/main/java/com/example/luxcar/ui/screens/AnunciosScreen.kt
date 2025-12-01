@@ -21,8 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color.Companion.Black
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -208,8 +210,9 @@ fun AnunciosScreen(
                     editingPoster = null
                     showDialog = true
                 },
-                containerColor = Orange,
-                shape = RoundedCornerShape(16.dp)
+                containerColor = Black,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.testTag("create_post_button")
             ) {
                 Icon(
                     painter = painterResource(id = android.R.drawable.ic_input_add),
@@ -439,6 +442,9 @@ fun AnunciosScreen(
 // ============================================
 // DIALOG DE CADASTRO/EDIÇÃO DE CARRO
 // ============================================
+// ============================================
+// DIALOG DE CADASTRO/EDIÇÃO DE CARRO COM TEST TAGS
+// ============================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomCarDialog(
@@ -466,7 +472,6 @@ fun CustomCarDialog(
     val acessoriosSelecionados = remember { mutableStateListOf<String>() }
     var selectedImages by remember { mutableStateOf(listOf<ByteArray>()) }
 
-    // --- mapas de tradução ---
     val tiposCombustivelMap = mapOf(
         "fuel_gas" to stringResource(R.string.fuel_gas),
         "fuel_alcohol" to stringResource(R.string.fuel_alcohol),
@@ -514,7 +519,6 @@ fun CustomCarDialog(
         }
     }
 
-    // --- launcher para seleção de imagens ---
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris ->
@@ -549,7 +553,7 @@ fun CustomCarDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // --- header do dialog ---
+                // --- header ---
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -564,7 +568,7 @@ fun CustomCarDialog(
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF212121)
                     )
-                    IconButton(onClick = onDismiss) {
+                    IconButton(onClick = onDismiss, modifier = Modifier.testTag("dismiss_dialog_button")) {
                         Icon(
                             painter = painterResource(id = android.R.drawable.ic_menu_close_clear_cancel),
                             contentDescription = stringResource(R.string.cancel),
@@ -575,13 +579,14 @@ fun CustomCarDialog(
 
                 Divider(color = Color(0xFFE0E0E0))
 
-                // --- campos de texto ---
+                // --- campos de texto com testTag ---
                 @Composable
                 fun DialogTextField(
                     value: String,
                     onValueChange: (String) -> Unit,
                     labelResId: Int,
                     placeholderResId: Int,
+                    testTag: String,
                     keyboardType: KeyboardType = KeyboardType.Text
                 ) {
                     OutlinedTextField(
@@ -589,7 +594,9 @@ fun CustomCarDialog(
                         onValueChange = onValueChange,
                         label = { Text(stringResource(labelResId), fontSize = 14.sp) },
                         placeholder = { Text(stringResource(placeholderResId), fontSize = 14.sp) },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(testTag),
                         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -599,24 +606,24 @@ fun CustomCarDialog(
                     )
                 }
 
-                DialogTextField(marca, { marca = it }, R.string.brand, R.string.hint_brand)
-                DialogTextField(modelo, { modelo = it }, R.string.model, R.string.hint_model)
+                DialogTextField(marca, { marca = it }, R.string.brand, R.string.hint_brand, "marca_input")
+                DialogTextField(modelo, { modelo = it }, R.string.model, R.string.hint_model, "modelo_input")
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.weight(1f)) {
-                        DialogTextField(cor, { cor = it }, R.string.color, R.string.hint_color)
+                        DialogTextField(cor, { cor = it }, R.string.color, R.string.hint_color, "cor_input")
                     }
                     Box(Modifier.weight(1f)) {
-                        DialogTextField(ano, { ano = it }, R.string.year, R.string.hint_year, KeyboardType.Number)
+                        DialogTextField(ano, { ano = it }, R.string.year, R.string.hint_year, "ano_input", KeyboardType.Number)
                     }
                 }
 
-                DialogTextField(kilometragem, { kilometragem = it }, R.string.km, R.string.hint_km, KeyboardType.Number)
-                DialogTextField(titulo, { titulo = it }, R.string.title, R.string.hint_title)
-                DialogTextField(descricao, { descricao = it }, R.string.description, R.string.hint_description)
-                DialogTextField(preco, { preco = it }, R.string.price_label, R.string.hint_price, KeyboardType.Number)
+                DialogTextField(kilometragem, { kilometragem = it }, R.string.km, R.string.hint_km, "km_input", KeyboardType.Number)
+                DialogTextField(titulo, { titulo = it }, R.string.title, R.string.hint_title, "titulo_input")
+                DialogTextField(descricao, { descricao = it }, R.string.description, R.string.hint_description, "descricao_input")
+                DialogTextField(preco, { preco = it }, R.string.price_label, R.string.hint_price, "preco_input", KeyboardType.Number)
 
-                // --- dropdowns ---
+                // --- dropdown categoria ---
                 var expandedCategoria by remember { mutableStateOf(false) }
                 ExposedDropdownMenuBox(
                     expanded = expandedCategoria,
@@ -628,7 +635,10 @@ fun CustomCarDialog(
                         readOnly = true,
                         label = { Text(stringResource(R.string.category), fontSize = 14.sp) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategoria) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                            .testTag("categoria_dropdown"),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Orange,
@@ -645,12 +655,14 @@ fun CustomCarDialog(
                                 onClick = {
                                     categoria = key
                                     expandedCategoria = false
-                                }
+                                },
+                                modifier = Modifier.testTag("categoria_item_$key")
                             )
                         }
                     }
                 }
 
+                // --- dropdown combustível ---
                 var expandedCombustivel by remember { mutableStateOf(false) }
                 ExposedDropdownMenuBox(
                     expanded = expandedCombustivel,
@@ -662,7 +674,10 @@ fun CustomCarDialog(
                         readOnly = true,
                         label = { Text(stringResource(R.string.fuel), fontSize = 14.sp) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCombustivel) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                            .testTag("combustivel_dropdown"),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Orange,
@@ -679,20 +694,20 @@ fun CustomCarDialog(
                                 onClick = {
                                     combustivel = key
                                     expandedCombustivel = false
-                                }
+                                },
+                                modifier = Modifier.testTag("combustivel_item_$key")
                             )
                         }
                     }
                 }
 
-                // --- acessórios ---
+                // --- acessórios com testTag ---
                 Text(
                     stringResource(R.string.accessories),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF212121)
                 )
-
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     acessoriosMap.forEach { (key, label) ->
                         Row(
@@ -705,7 +720,8 @@ fun CustomCarDialog(
                                     else
                                         acessoriosSelecionados.add(key)
                                 }
-                                .padding(8.dp),
+                                .padding(8.dp)
+                                .testTag("accessory_$key"),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -725,7 +741,9 @@ fun CustomCarDialog(
 
                 // --- status de negociação ---
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("negociacao_card"),
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = Color(0xFFFFF3E0)
@@ -734,8 +752,7 @@ fun CustomCarDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { emNegociacao = !emNegociacao }
-                            .padding(16.dp),
+                            .clickable { emNegociacao = !emNegociacao },
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -756,6 +773,7 @@ fun CustomCarDialog(
                         Switch(
                             checked = emNegociacao,
                             onCheckedChange = { emNegociacao = it },
+                            modifier = Modifier.testTag("negociacao_switch"),
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
                                 checkedTrackColor = Color(0xFFD32F2F),
@@ -766,12 +784,12 @@ fun CustomCarDialog(
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
-
                 // --- seleção de imagens ---
                 OutlinedButton(
                     onClick = { launcher.launch("image/*") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("select_images_button"),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = Orange
@@ -790,7 +808,7 @@ fun CustomCarDialog(
                 if (selectedImages.isNotEmpty()) {
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().testTag("selected_images_preview")
                     ) {
                         items(selectedImages) { imgBytes ->
                             val bmp = BitmapFactory.decodeByteArray(imgBytes, 0, imgBytes.size)
@@ -812,14 +830,17 @@ fun CustomCarDialog(
 
                 Divider(color = Color(0xFFE0E0E0))
 
-                // --- botões de ação ---
+                // --- botões ---
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
                         onClick = onDismiss,
-                        modifier = Modifier.weight(1f).height(56.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp)
+                            .testTag("cancel_button"),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
@@ -850,7 +871,10 @@ fun CustomCarDialog(
                             )
                             onSave(car, poster, selectedImages)
                         },
-                        modifier = Modifier.weight(1f).height(56.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp)
+                            .testTag("save_button"),
                         colors = ButtonDefaults.buttonColors(containerColor = Orange),
                         shape = RoundedCornerShape(12.dp)
                     ) {

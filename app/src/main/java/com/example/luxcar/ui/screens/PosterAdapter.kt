@@ -79,6 +79,8 @@ class PosterAdapter(
         holder.btnDelete.setOnClickListener { onDelete(poster) }
     }
 
+
+
     /**
      * ✅ CORRIGIDO: Parâmetros agora usam Long
      */

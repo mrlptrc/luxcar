@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.example.luxcar"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.luxcar"
@@ -17,9 +17,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        // Runner obrigatório para o Orchestrator
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        testInstrumentationRunnerArguments["clearPackageData"] = "true"
     }
 
     buildTypes {
@@ -33,10 +31,6 @@ android {
     }
 
     testOptions {
-        // Ativa o ORCHESTRATOR
-        execution = "ANDROIDX_TEST_ORCHESTRATOR"
-
-        // Desativa animações
         animationsDisabled = true
 
         // Habilita recursos no teste unitário
@@ -63,9 +57,6 @@ android {
 
 dependencies {
 
-    // ORCHESTRATOR (obrigatório para run orchestration)
-    androidTestUtil("androidx.test:orchestrator:1.4.2")
-
     // CORE
     implementation("org.mindrot:jbcrypt:0.4")
     implementation("androidx.core:core-ktx:1.12.0")
@@ -78,6 +69,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation(libs.androidx.espresso.core)
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
@@ -99,5 +91,4 @@ dependencies {
     androidTestImplementation(platform("androidx.compose:compose-bom:2025.09.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.0")
 }
