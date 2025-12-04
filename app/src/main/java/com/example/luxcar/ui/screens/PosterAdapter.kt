@@ -12,14 +12,10 @@ import com.example.luxcar.R
 import com.example.luxcar.data.model.Car
 import com.example.luxcar.data.model.Poster
 
-/**
- * Adapter para RecyclerView de Posters
- * ✅ CORRIGIDO: Trabalha com Long IDs em vez de Int
- */
 class PosterAdapter(
     private var posters: List<Poster>,
     private val cars: MutableList<Car>,
-    private var images: MutableMap<Long, ByteArray?>, // ✅ Long em vez de Int
+    private var images: MutableMap<Long, ByteArray?>,
     private val onOpen: (Poster) -> Unit,
     private val onEdit: (Poster) -> Unit,
     private val onDelete: (Poster) -> Unit
@@ -45,19 +41,27 @@ class PosterAdapter(
 
     override fun onBindViewHolder(holder: PosterViewHolder, position: Int) {
         val poster = posters[position]
-        // ✅ CORRIGIDO: Não precisa mais converter, ambos são Long
         val car = cars.find { it.id == poster.carId }
         val context = holder.itemView.context
 
         holder.title.text = poster.titulo
         holder.subtitle.text = "${car?.marca} ${car?.modelo} (${car?.ano})"
-
-        // usa string resource para formatação de preço
         holder.price.text = context.getString(R.string.price, poster.preco)
-
-        // traduz textos dos botões
         holder.btnEdit.text = context.getString(R.string.edit_ad)
         holder.btnDelete.text = context.getString(R.string.ad_deleted)
+
+        holder.itemView.tag = "poster_item_${poster.titulo}"
+        holder.itemView.contentDescription = "poster_item_${poster.titulo}"
+
+        holder.title.tag = "poster_title_${poster.titulo}"
+        holder.price.tag = "poster_price_${poster.titulo}"
+        holder.price.contentDescription = poster.preco.toString()
+
+        holder.btnEdit.tag = "edit_post_button_${poster.titulo}"
+        holder.btnEdit.contentDescription = "edit_post_button_${poster.titulo}"
+
+        holder.btnDelete.tag = "delete_post_button_${poster.titulo}"
+        holder.btnDelete.contentDescription = "delete_post_button_${poster.titulo}"
 
         // flag de negociação
         if(poster.emNegociacao) {
@@ -70,6 +74,7 @@ class PosterAdapter(
         images[poster.id]?.let { imgBytes ->
             BitmapFactory.decodeByteArray(imgBytes, 0, imgBytes.size)?.let {
                 holder.img.setImageBitmap(it)
+                holder.img.contentDescription = "poster_image_${poster.titulo}"
             }
         }
 
@@ -79,11 +84,6 @@ class PosterAdapter(
         holder.btnDelete.setOnClickListener { onDelete(poster) }
     }
 
-
-
-    /**
-     * ✅ CORRIGIDO: Parâmetros agora usam Long
-     */
     fun updateList(
         newList: List<Poster>,
         newImages: Map<Long, ByteArray?>,

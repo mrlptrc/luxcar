@@ -34,7 +34,7 @@ import com.example.luxcar.R
  * Tela de detalhes do carro
  * ✅ CORRIGIDO: Parâmetro carId agora é Long
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CarDetailScreen(
     db: AppDatabase,

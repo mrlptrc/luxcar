@@ -46,9 +46,6 @@ import com.example.luxcar.R
 import kotlinx.coroutines.withContext
 import kotlin.collections.forEach
 
-// ============================================
-// TELA PRINCIPAL DE ANÚNCIOS
-// ============================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnunciosScreen(
