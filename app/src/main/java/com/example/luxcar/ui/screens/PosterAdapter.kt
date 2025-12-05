@@ -48,7 +48,7 @@ class PosterAdapter(
         holder.subtitle.text = "${car?.marca} ${car?.modelo} (${car?.ano})"
         holder.price.text = context.getString(R.string.price, poster.preco)
         holder.btnEdit.text = context.getString(R.string.edit_ad)
-        holder.btnDelete.text = context.getString(R.string.ad_deleted)
+        holder.btnDelete.text = context.getString(R.string.delete)
 
         holder.itemView.tag = "poster_item_${poster.titulo}"
         holder.itemView.contentDescription = "poster_item_${poster.titulo}"

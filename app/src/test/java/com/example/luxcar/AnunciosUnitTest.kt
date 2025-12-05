@@ -13,9 +13,45 @@ class AnunciosUnitTest {
     @Before
     fun setup() {
         carros = listOf(
-            Car(id = 1, marca = "Toyota", modelo = "Corolla", ano = 2020, cor = "Branco", kilometragem = 30000.0, combustivel = "Flex", categoria = "Sedan", acessorios = listOf("Airbag")),
-            Car(id = 2, marca = "Honda", modelo = "Civic", ano = 2019, cor = "Preto", kilometragem = 40000.0, combustivel = "Gasolina", categoria = "Sedan", acessorios = listOf("ABS")),
-            Car(id = 3, marca = "Jeep", modelo = "Renegade", ano = 2021, cor = "Cinza", kilometragem = 20000.0, combustivel = "Diesel", categoria = "SUV", acessorios = listOf("4x4"))
+            Car(
+                id = 1,
+                marca = "Toyota",
+                modelo = "Corolla",
+                ano = 2020,
+                cor = "Branco",
+                kilometragem = 30000.0,
+                combustivel = "Flex",
+                categoria = "Sedan",
+                acessorios = listOf("Airbag"),
+                placa = "ABC1D23",
+                cambio = "Automático"
+            ),
+            Car(
+                id = 2,
+                marca = "Honda",
+                modelo = "Civic",
+                ano = 2019,
+                cor = "Preto",
+                kilometragem = 40000.0,
+                combustivel = "Gasolina",
+                categoria = "Sedan",
+                acessorios = listOf("ABS"),
+                placa = "EFG4H56",
+                cambio = "Manual"
+            ),
+            Car(
+                id = 3,
+                marca = "Jeep",
+                modelo = "Renegade",
+                ano = 2021,
+                cor = "Cinza",
+                kilometragem = 20000.0,
+                combustivel = "Diesel",
+                categoria = "SUV",
+                acessorios = listOf("4x4"),
+                placa = "IJK7L89",
+                cambio = "Automático"
+            )
         )
 
         anuncios = listOf(
@@ -32,7 +68,7 @@ class AnunciosUnitTest {
         val filtrados = anuncios.filter { poster ->
             val car = carros.find { it.id.toLong() == poster.carId }
             val textoBusca = "${poster.titulo} ${car?.marca} ${car?.modelo}".lowercase()
-            textoBusca.contains(query.lowercase())
+            textoBusca.contains(query.lowercase()) // query civic
         }
 
         assertEquals(1, filtrados.size)

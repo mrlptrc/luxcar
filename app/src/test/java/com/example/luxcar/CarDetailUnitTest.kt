@@ -22,7 +22,9 @@ class CarDetailUnitTest {
             kilometragem = 15000.0,
             combustivel = "Flex",
             categoria = "Sedan",
-            acessorios = listOf("Airbag", "ABS", "Ar-condicionado")
+            acessorios = listOf("Airbag", "ABS", "Ar-condicionado"),
+            placa = "ABC9D99",
+            cambio = "Automático"
         )
 
         poster = Poster(
@@ -43,6 +45,8 @@ class CarDetailUnitTest {
         assertEquals("Prata", car.cor)
         assertEquals("Flex", car.combustivel)
         assertEquals("Sedan", car.categoria)
+        assertEquals("ABC9D99", car.placa)
+        assertEquals("Automático", car.cambio)
         assertTrue(car.acessorios.contains("Airbag"))
     }
 

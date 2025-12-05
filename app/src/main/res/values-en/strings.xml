@@ -22,7 +22,17 @@
     <string name="cancel">Cancel</string>
     <string name="ad_deleted">Delete</string>
     <string name="error_save">Error saving: %s</string>
+    <string name="delete">Excluir</string>
+    <!-- Form fields -->
+    <string name="plate">License Plate</string>
+    <string name="hint_plate">Ex: ABC-1234</string>
+    <string name="transmission">Transmission</string>
 
+    <!-- Transmission types -->
+    <string name="trans_manual">Manual</string>
+    <string name="trans_automatic">Automatic</string>
+    <string name="trans_automated">Automated</string>
+    <string name="trans_cvt">CVT</string>
     <!-- Categories -->
     <string name="cat_all">All</string>
     <string name="cat_suv">SUV</string>

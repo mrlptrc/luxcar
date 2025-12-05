@@ -381,44 +381,90 @@ fun AnunciosScreen(
     }
 
     // --- dialog de confirmação de exclusão ---
+    // --- dialog de confirmação de exclusão ---
     if (showDeleteDialog && posterToDelete != null) {
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
+            onDismissRequest = {
+                showDeleteDialog = false
+                posterToDelete = null
+            },
             title = {
                 Text(
                     stringResource(R.string.confirm_delete_title),
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.testTag("delete_dialog_title")
                 )
             },
             text = {
-                Text(stringResource(R.string.confirm_delete_message))
+                Text(
+                    stringResource(R.string.confirm_delete_message),
+                    modifier = Modifier.testTag("delete_dialog_message")
+                )
             },
             confirmButton = {
                 Button(
                     onClick = {
                         scope.launch {
-                            posterToDelete?.let { poster ->
-                                val car = cars.find { it.id.toLong() == poster.carId }
-                                db.posterDao().delete(poster)
-                                car?.let { db.carDao().deleteCar(it) }
-                                posters = db.posterDao().list()
-                                imagesMap = imagesMap - poster.id
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.ad_deleted),
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                            try {
+                                posterToDelete?.let { poster ->
+                                    println("🔷 Excluindo poster: ${poster.titulo} (ID: ${poster.id})")
+
+                                    // 1. Deletar imagens primeiro
+                                    db.posterImageDao().deleteByPosterId(poster.id)
+
+                                    // 2. Deletar o poster
+                                    db.posterDao().delete(poster)
+
+                                    // 3. Deletar o carro
+                                    val car = cars.find { it.id == poster.carId }
+                                    car?.let { db.carDao().deleteCar(it) }
+
+                                    // 4. ✅ ATUALIZAR A LISTA ANTES DE FECHAR O DIALOG
+                                    withContext(Dispatchers.Main) {
+                                        posters = db.posterDao().list()
+                                        val map = mutableMapOf<Long, ByteArray?>()
+                                        posters.forEach { p ->
+                                            val imgs = db.posterImageDao().getByPosterId(p.id)
+                                            map[p.id] = imgs.firstOrNull()?.image
+                                        }
+                                        imagesMap = map
+
+                                        // 5. ✅ FECHAR O DIALOG APÓS ATUALIZAR
+                                        showDeleteDialog = false
+                                        posterToDelete = null
+
+                                        // 6. Mostrar mensagem
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.ad_deleted),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+
+                                        println("🔷 Exclusão concluída. Total de posters: ${posters.size}")
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                println("🔷 ERRO ao excluir: ${e.message}")
+                                e.printStackTrace()
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        context,
+                                        "Erro ao excluir: ${e.message}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                    showDeleteDialog = false
+                                    posterToDelete = null
+                                }
                             }
                         }
-                        showDeleteDialog = false
-                        posterToDelete = null
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFFD32F2F)
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.testTag("confirm_delete_button")
                 ) {
-                    Text(stringResource(R.string.ad_deleted))
+                    Text(stringResource(R.string.delete))
                 }
             },
             dismissButton = {
@@ -426,12 +472,14 @@ fun AnunciosScreen(
                     onClick = {
                         showDeleteDialog = false
                         posterToDelete = null
-                    }
+                    },
+                    modifier = Modifier.testTag("cancel_delete_button")
                 ) {
                     Text(stringResource(R.string.cancel))
                 }
             },
-            shape = RoundedCornerShape(20.dp)
+            shape = RoundedCornerShape(20.dp),
+            modifier = Modifier.testTag("delete_confirmation_dialog")
         )
     }
 }
@@ -459,11 +507,13 @@ fun CustomCarDialog(
     var modelo by remember { mutableStateOf("") }
     var cor by remember { mutableStateOf("") }
     var ano by remember { mutableStateOf("") }
+    var placa by remember { mutableStateOf("") }
     var kilometragem by remember { mutableStateOf("") }
     var titulo by remember { mutableStateOf("") }
     var descricao by remember { mutableStateOf("") }
     var preco by remember { mutableStateOf("") }
     var combustivel by remember { mutableStateOf("fuel_gas") }
+    var cambio by remember { mutableStateOf("trans_manual") }
     var categoria by remember { mutableStateOf("cat_suv") }
     var emNegociacao by remember { mutableStateOf(false) }
     val acessoriosSelecionados = remember { mutableStateListOf<String>() }
@@ -475,6 +525,14 @@ fun CustomCarDialog(
         "fuel_diesel" to stringResource(R.string.fuel_diesel),
         "fuel_flex" to stringResource(R.string.fuel_flex),
         "fuel_electric" to stringResource(R.string.fuel_electric)
+    )
+
+    // ✅ NOVO: Mapa de tipos de câmbio
+    val tiposCambioMap = mapOf(
+        "trans_manual" to stringResource(R.string.trans_manual),
+        "trans_automatic" to stringResource(R.string.trans_automatic),
+        "trans_automated" to stringResource(R.string.trans_automated),
+        "trans_cvt" to stringResource(R.string.trans_cvt)
     )
 
     val tiposCategoriaMap = mapOf(
@@ -501,8 +559,10 @@ fun CustomCarDialog(
                 modelo = it.modelo
                 cor = it.cor
                 ano = it.ano.toString()
+                placa = it.placa  // ✅ CARREGAR PLACA
                 kilometragem = it.kilometragem.toString()
                 combustivel = it.combustivel
+                cambio = it.cambio  // ✅ CARREGAR CÂMBIO
                 categoria = it.categoria
                 acessoriosSelecionados.clear()
                 acessoriosSelecionados.addAll(it.acessorios)
@@ -547,7 +607,8 @@ fun CustomCarDialog(
             Column(
                 modifier = Modifier
                     .padding(24.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(rememberScrollState())
+                    .testTag("scroll_container"),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // --- header ---
@@ -614,6 +675,15 @@ fun CustomCarDialog(
                         DialogTextField(ano, { ano = it }, R.string.year, R.string.hint_year, "ano_input", KeyboardType.Number)
                     }
                 }
+
+                // ✅ NOVO: Campo de placa
+                DialogTextField(
+                    value = placa,
+                    onValueChange = { placa = it.uppercase() },  // Converte para maiúscula automaticamente
+                    labelResId = R.string.plate,
+                    placeholderResId = R.string.hint_plate,
+                    testTag = "placa_input"
+                )
 
                 DialogTextField(kilometragem, { kilometragem = it }, R.string.km, R.string.hint_km, "km_input", KeyboardType.Number)
                 DialogTextField(titulo, { titulo = it }, R.string.title, R.string.hint_title, "titulo_input")
@@ -698,6 +768,45 @@ fun CustomCarDialog(
                     }
                 }
 
+                // ✅ NOVO: dropdown câmbio
+                var expandedCambio by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = expandedCambio,
+                    onExpandedChange = { expandedCambio = !expandedCambio }
+                ) {
+                    OutlinedTextField(
+                        value = tiposCambioMap[cambio] ?: "",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.transmission), fontSize = 14.sp) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCambio) },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                            .testTag("cambio_dropdown"),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Orange,
+                            focusedLabelColor = Orange
+                        )
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expandedCambio,
+                        onDismissRequest = { expandedCambio = false }
+                    ) {
+                        tiposCambioMap.forEach { (key, label) ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    cambio = key
+                                    expandedCambio = false
+                                },
+                                modifier = Modifier.testTag("cambio_item_$key")
+                            )
+                        }
+                    }
+                }
+
                 // --- acessórios com testTag ---
                 Text(
                     stringResource(R.string.accessories),
@@ -749,6 +858,7 @@ fun CustomCarDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .padding(16.dp)
                             .clickable { emNegociacao = !emNegociacao },
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -805,7 +915,9 @@ fun CustomCarDialog(
                 if (selectedImages.isNotEmpty()) {
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxWidth().testTag("selected_images_preview")
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("selected_images_preview")
                     ) {
                         items(selectedImages) { imgBytes ->
                             val bmp = BitmapFactory.decodeByteArray(imgBytes, 0, imgBytes.size)
@@ -853,8 +965,10 @@ fun CustomCarDialog(
                                 modelo = modelo,
                                 cor = cor,
                                 ano = ano.toIntOrNull() ?: 0,
+                                placa = placa,  // ✅ ADICIONAR PLACA
                                 kilometragem = kilometragem.toDoubleOrNull() ?: 0.0,
                                 combustivel = combustivel,
+                                cambio = cambio,  // ✅ ADICIONAR CÂMBIO
                                 categoria = categoria,
                                 acessorios = acessoriosSelecionados.toList()
                             )

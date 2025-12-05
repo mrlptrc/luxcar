@@ -24,7 +24,17 @@
     <string name="cancel">Cancelar</string>
     <string name="ad_deleted">Eliminar</string>
     <string name="error_save">Error al guardar: %s</string>
+    <string name="delete">Excluir</string>
+    <!-- Campos del formulario -->
+    <string name="plate">Placa</string>
+    <string name="hint_plate">Ej: ABC-1234</string>
+    <string name="transmission">Transmisión</string>
 
+    <!-- Tipos de transmisión -->
+    <string name="trans_manual">Manual</string>
+    <string name="trans_automatic">Automática</string>
+    <string name="trans_automated">Automatizada</string>
+    <string name="trans_cvt">CVT</string>
     <!-- Categorías -->
     <string name="cat_all">Todos</string>
     <string name="cat_suv">SUV</string>

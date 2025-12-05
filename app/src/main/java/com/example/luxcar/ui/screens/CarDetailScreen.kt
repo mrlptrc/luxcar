@@ -69,7 +69,7 @@ fun CarDetailScreen(
         "acc_ac" to stringResource(R.string.acc_ac),
         "acc_abs" to stringResource(R.string.acc_abs),
         "acc_airbag" to stringResource(R.string.acc_airbag),
-        "acc_camera" to stringResource(R.string.acc_camera)
+        "acc_camera" to stringResource(R.string.acc_camera),
     )
 
     LaunchedEffect(carId) {
@@ -230,6 +230,16 @@ fun CarDetailScreen(
                             InfoRow(
                                 label = stringResource(id = R.string.km),
                                 value = "${c.kilometragem} km",
+                                fontScale = fontScale
+                            )
+                            InfoRow(
+                                label = stringResource(id = R.string.km),
+                                value = c.cambio,
+                                fontScale = fontScale
+                            )
+                            InfoRow(
+                                label = stringResource(id = R.string.km),
+                                value = c.placa,
                                 fontScale = fontScale
                             )
                         }

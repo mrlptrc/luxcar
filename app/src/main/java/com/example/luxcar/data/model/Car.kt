@@ -11,8 +11,10 @@ data class Car (
     val modelo: String,
     val cor: String,
     val ano: Int,
+    val placa: String,
     val kilometragem: Double,
     val combustivel: String,
+    val cambio: String,
     val categoria: String,
     val acessorios: List<String>
 )

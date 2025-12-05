@@ -16,7 +16,7 @@ import com.example.luxcar.data.model.PosterImage
         Poster::class,
         PosterImage::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
